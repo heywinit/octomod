@@ -15,7 +15,7 @@ export default function Providers({ children }: { children: React.ReactNode }) {
 			disableTransitionOnChange
 		>
 			<QueryClientProvider client={queryClient}>
-				{children}
+        {children}
 				<ReactQueryDevtools />
 			</QueryClientProvider>
 			<Toaster richColors />
