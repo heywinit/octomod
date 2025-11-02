@@ -63,13 +63,13 @@
         "@trpc/client": "catalog:",
         "@trpc/server": "catalog:",
         "dotenv": "catalog:",
-        "next": "catalog:",
         "zod": "catalog:",
       },
       "devDependencies": {
         "tsdown": "catalog:",
       },
       "peerDependencies": {
+        "next": "catalog:",
         "typescript": "^5",
       },
     },
