@@ -7,7 +7,6 @@
   },
   "files": {
     "ignoreUnknown": false,
-    "ignore": ["**/*.css"],
     "includes": [
       "**",
       "!**/.next",
@@ -67,6 +66,11 @@
   "javascript": {
     "formatter": {
       "quoteStyle": "double"
+    }
+  },
+  "css": {
+    "parser": {
+      "tailwindDirectives": true
     }
   }
 }
