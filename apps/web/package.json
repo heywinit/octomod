@@ -24,6 +24,7 @@
     "lucide-react": "^0.552.0",
     "next": "catalog:",
     "next-themes": "^0.4.6",
+    "octokit": "^5.0.5",
     "radix-ui": "^1.4.2",
     "react": "19.2.0",
     "react-dom": "19.2.0",

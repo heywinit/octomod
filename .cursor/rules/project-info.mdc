@@ -1,0 +1,22 @@
+---
+alwaysApply: true
+---
+
+# Cursor Rules for Octomod
+
+## Project Introduction
+
+Octomod is a GitHub utility web app that aims to provide a better dashboard to developers. GitHub's dashboard sucks in terms of usability and is just slop mostly. Octomod aims to fix that by providing devs with customization and a much better UX aiming at providing info devs actually care about.
+
+## Code Style
+
+- Write clean and structured code as this is an open source project
+- Use TypeScript with proper types
+- Follow Next.js 16 best practices
+- Use server components when possible, client components only when needed for interactivity
+
+## GitHub Integration
+
+- Use Octokit.js for all GitHub API interactions
+- Store GitHub OAuth tokens in localStorage (client-side)
+- Use server actions or server components to make authenticated GitHub API calls
