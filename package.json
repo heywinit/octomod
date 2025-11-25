@@ -4,8 +4,7 @@
   "type": "module",
   "workspaces": {
     "packages": [
-      "apps/*",
-      "packages/*"
+      "apps/*"
     ],
     "catalog": {
       "next": "16.0.0",
@@ -22,12 +21,7 @@
     "dev": "turbo dev",
     "build": "turbo build",
     "check-types": "turbo check-types",
-    "dev:native": "turbo -F native dev",
-    "dev:web": "turbo -F web dev",
-    "db:push": "turbo -F @octomod/db db:push",
-    "db:studio": "turbo -F @octomod/db db:studio",
-    "db:generate": "turbo -F @octomod/db db:generate",
-    "db:migrate": "turbo -F @octomod/db db:migrate"
+    "dev:web": "turbo -F web dev"
   },
   "dependencies": {
     "dotenv": "^17.2.2",

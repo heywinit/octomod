@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist_Mono, Plus_Jakarta_Sans } from "next/font/google";
 import "../index.css";
+import { AppSidebar } from "@/components/app-sidebar";
 import Providers from "@/components/providers";
 
 const plusJakartaSans = Plus_Jakarta_Sans({
@@ -28,7 +29,9 @@ export default function RootLayout({
       <body
         className={`${plusJakartaSans.variable} ${geistMono.variable} antialiased`}
       >
-        <Providers>{children}</Providers>
+        <Providers>
+          <AppSidebar>{children}</AppSidebar>
+        </Providers>
       </body>
     </html>
   );
