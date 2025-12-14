@@ -2,8 +2,7 @@
 import { ChevronDown, ExternalLink, Github } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useRef } from "react";
-import { Button } from "@/components/ui/button";
+import { useEffect, useRef, useState } from "react";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   Collapsible,
@@ -17,6 +16,13 @@ export default function HomePage() {
   const router = useRouter();
   const roadmapTabRef = useRef<HTMLButtonElement>(null);
   const faqTabRef = useRef<HTMLButtonElement>(null);
+  const [tabValue, setTabValue] = useState("roadmap");
+
+  const handleTabChange = (value: string) => {
+    if (value !== "source") {
+      setTabValue(value);
+    }
+  };
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -58,71 +64,75 @@ export default function HomePage() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [router]);
   return (
-    <div className="flex min-h-screen w-screen flex-col bg-background px-8 pt-8 pb-4 md:px-6 md:pt-48">
-      <div className="mx-auto flex w-full max-w-xl flex-1 flex-col space-y-8 md:space-y-12">
+    <div className="flex min-h-screen w-screen flex-col bg-background px-6 pt-12 pb-4 md:px-8 md:pt-48">
+      <div className="mx-auto flex w-full max-w-xl flex-1 flex-col space-y-12 md:space-y-16">
         {/* Main content */}
-        <div className="mb-4 space-y-2">
+        <div className="mb-6 space-y-2">
           <div className="flex items-center justify-between gap-4">
             <h1 className="font-semibold text-3xl text-primary tracking-tight md:text-5xl">
               Octomod
             </h1>
           </div>
-          <p
-            className="text-md text-muted-foreground [font-feature-settings:'cv02','cv03','cv04','cv11'] md:text-lg"
-            style={{ lineHeight: "26.25px", letterSpacing: "-0.3px" }}
-          >
+          <p className="text-lg text-muted-foreground leading-snug">
             {description}
           </p>
-
-          <div className="flex items-center gap-3">
-            <Button asChild className="gap-2 pr-1.5 pl-2.5">
-              <Link href="/">
-                Open Octomod
-                <kbd className="pointer-events-none ml-1 hidden h-5 select-none items-center gap-1 rounded border border-secondary bg-secondary px-1.5 font-medium font-mono text-[10px] opacity-100 sm:inline-flex">
-                  <span className="text-xs">O</span>
-                </kbd>
-              </Link>
-            </Button>
-            <Button variant="outline" className="gap-2 pr-1.5 pl-2">
-              <Link
-                href="https://github.com/heywinit/octomod"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-2"
-              >
-                <Github className="h-4 w-4" />
-                <span className="hidden sm:inline">View Source</span>
-                <kbd className="pointer-events-none mr-0 ml-1 hidden h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-medium font-mono text-[10px] opacity-100 sm:inline-flex">
-                  <span className="text-xs">V</span>
-                </kbd>
-              </Link>
-            </Button>
-          </div>
         </div>
 
         {/* Tabs */}
-        <Tabs defaultValue="roadmap" className="w-full">
-          <TabsList className="w-full justify-start">
-            <TabsTrigger
-              value="roadmap"
-              ref={roadmapTabRef}
-              className="pr-1.5 pl-2"
-            >
-              Roadmap
-              <kbd className="pointer-events-none ml-1.5 hidden h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-medium font-mono text-[10px] opacity-100 sm:inline-flex">
-                <span className="text-xs">R</span>
-              </kbd>
-            </TabsTrigger>
-            <TabsTrigger value="faq" ref={faqTabRef} className="pr-1.5 pl-2">
-              FAQ
-              <kbd className="pointer-events-none ml-1.5 hidden h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-medium font-mono text-[10px] opacity-100 sm:inline-flex">
-                <span className="text-xs">F</span>
-              </kbd>
-            </TabsTrigger>
+        <Tabs
+          defaultValue="roadmap"
+          className="w-full"
+          value={tabValue}
+          onValueChange={handleTabChange}
+        >
+          <TabsList className="w-full justify-between">
+            <div className="flex items-center gap-1">
+              <TabsTrigger
+                value="roadmap"
+                ref={roadmapTabRef}
+                className="px-2.5 md:pr-1.5 md:pl-2"
+              >
+                Roadmap
+                <kbd className="pointer-events-none ml-1.5 hidden h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-medium font-mono text-[10px] opacity-100 sm:inline-flex">
+                  <span className="text-xs">R</span>
+                </kbd>
+              </TabsTrigger>
+              <TabsTrigger
+                value="faq"
+                ref={faqTabRef}
+                className="px-2.5 md:pr-1.5 md:pl-2"
+              >
+                FAQ
+                <kbd className="pointer-events-none ml-1.5 hidden h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-medium font-mono text-[10px] opacity-100 sm:inline-flex">
+                  <span className="text-xs">F</span>
+                </kbd>
+              </TabsTrigger>
+            </div>
+            <div className="flex items-center gap-4">
+              <TabsTrigger
+                value="source"
+                className="h-min gap-2 bg-background/50 pr-1.5 pl-2"
+              >
+                <Link
+                  href="https://github.com/heywinit/octomod"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1"
+                >
+                  <Github className="mr-1 size-4" />
+                  <span className="">
+                    <span className="hidden sm:inline">View</span> Source
+                  </span>
+                  <kbd className="pointer-events-none mr-0 ml-1 hidden h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-medium font-mono text-[10px] text-muted-foreground opacity-100 sm:inline-flex">
+                    <span className="text-xs">V</span>
+                  </kbd>
+                </Link>
+              </TabsTrigger>
+            </div>
           </TabsList>
-          <TabsContent value="roadmap" className="mt-4 space-y-3">
+          <TabsContent value="roadmap" className="mt-6 space-y-6">
             {roadmap.map((milestone) => (
-              <div key={milestone.id} className="space-y-2">
+              <div key={milestone.id} className="space-y-1">
                 <div className="flex items-center gap-3">
                   <Checkbox
                     checked={milestone.completed}
@@ -145,7 +155,7 @@ export default function HomePage() {
                         href={href}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="group flex w-full cursor-pointer items-center justify-between gap-3 rounded-sm p-1 pr-2 pl-1.5 text-left hover:bg-accent/50"
+                        className="group flex w-full cursor-pointer items-center justify-between gap-3 rounded-sm p-2 pr-3 pl-2.5 text-left hover:bg-accent/50"
                       >
                         <div className="flex items-center gap-3">
                           <Checkbox
@@ -176,21 +186,21 @@ export default function HomePage() {
               </div>
             ))}
           </TabsContent>
-          <TabsContent value="faq" className="mt-2 px-1">
+          <TabsContent value="faq" className="mt-6 px-1">
             <div className="space-y-2">
               {faqItems.map((faq) => (
                 <Collapsible
                   key={faq.id}
                   className="group border-border border-b"
                 >
-                  <CollapsibleTrigger className="flex w-full items-center justify-between gap-4 py-2 text-left transition-colors hover:text-foreground">
+                  <CollapsibleTrigger className="flex w-full items-center justify-between gap-4 py-2.5 text-left transition-colors hover:text-foreground">
                     <h3 className="font-medium text-base text-foreground">
                       {faq.question}
                     </h3>
                     <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200 group-data-[state=open]:rotate-180" />
                   </CollapsibleTrigger>
                   <CollapsibleContent className="overflow-hidden data-[state=closed]:animate-collapsible-up data-[state=open]:animate-collapsible-down">
-                    <div className="pb-4">
+                    <div className="pb-6">
                       <p className="text-foreground/80 text-sm leading-relaxed">
                         {faq.answer}
                       </p>
@@ -204,7 +214,7 @@ export default function HomePage() {
 
         {/* Footer */}
         <footer className="mt-auto border-border border-t pt-4">
-          <div className="flex flex-col items-center justify-center gap-1 text-foreground/60 text-sm md:flex-row">
+          <div className="flex flex-col items-center justify-center gap-2 text-foreground/60 text-sm md:flex-row">
             <p className="text-foreground/40">
               Built by{" "}
               <Link
