@@ -1,5 +1,10 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
+import {
+  createCookieConfig,
+  createErrorRedirect,
+  validateGitHubConfig,
+} from "@/lib/auth.utils";
 import { COOKIE_NAMES, GITHUB_OAUTH } from "@/lib/constants";
 
 export async function GET(request: NextRequest) {
@@ -10,16 +15,13 @@ export async function GET(request: NextRequest) {
   )?.value;
 
   if (!code || !state || state !== storedState) {
-    return NextResponse.redirect(new URL("/?error=invalid_state", request.url));
+    return createErrorRedirect(request, "invalid_state");
   }
 
-  const clientId = process.env.GITHUB_CLIENT_ID;
-  const clientSecret = process.env.GITHUB_CLIENT_SECRET;
+  const { clientId, clientSecret, isValid } = validateGitHubConfig();
 
-  if (!clientId || !clientSecret) {
-    return NextResponse.redirect(
-      new URL("/?error=missing_config", request.url),
-    );
+  if (!isValid) {
+    return createErrorRedirect(request, "missing_config");
   }
 
   try {
@@ -40,9 +42,7 @@ export async function GET(request: NextRequest) {
     const tokenData = await tokenResponse.json();
 
     if (tokenData.error) {
-      return NextResponse.redirect(
-        new URL(`/?error=${tokenData.error}`, request.url),
-      );
+      return createErrorRedirect(request, tokenData.error);
     }
 
     const accessToken = tokenData.access_token;
@@ -52,16 +52,18 @@ export async function GET(request: NextRequest) {
     response.cookies.delete(COOKIE_NAMES.GITHUB_OAUTH_STATE);
 
     // Store token in a temporary cookie that will be read by client and moved to localStorage
-    response.cookies.set(COOKIE_NAMES.GITHUB_TOKEN_TEMP, accessToken, {
-      httpOnly: false, // Needs to be accessible from client
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      maxAge: 60, // 1 minute - just long enough for client to read it
-    });
+    response.cookies.set(
+      COOKIE_NAMES.GITHUB_TOKEN_TEMP,
+      accessToken,
+      createCookieConfig({
+        httpOnly: false, // Needs to be accessible from client
+        maxAge: 60, // 1 minute - just long enough for client to read it
+      }),
+    );
 
     return response;
   } catch (error) {
     console.error("GitHub OAuth error:", error);
-    return NextResponse.redirect(new URL("/?error=oauth_failed", request.url));
+    return createErrorRedirect(request, "oauth_failed");
   }
 }
