@@ -18,6 +18,7 @@ import {
   getGitHubToken,
   type Repository,
 } from "@/lib/github.service";
+import { deleteCookie, getCookie } from "@/lib/utils";
 
 export default function Home() {
   const [isLoading, setIsLoading] = useState(true);
@@ -49,17 +50,12 @@ export default function Home() {
 
   useEffect(() => {
     // Check for OAuth callback token in cookie
-    const tokenCookiePrefix = `${COOKIE_NAMES.GITHUB_TOKEN_TEMP}=`;
-    const tokenCookie = document.cookie
-      .split("; ")
-      .find((row) => row.startsWith(tokenCookiePrefix));
+    const callbackToken = getCookie(COOKIE_NAMES.GITHUB_TOKEN_TEMP);
 
-    if (tokenCookie) {
-      const token = tokenCookie.split("=")[1];
-      localStorage.setItem(STORAGE_KEYS.GITHUB_TOKEN, token);
+    if (callbackToken) {
+      localStorage.setItem(STORAGE_KEYS.GITHUB_TOKEN, callbackToken);
       // Clear the cookie
-      const expires = new Date(0).toUTCString();
-      document.cookie = `${COOKIE_NAMES.GITHUB_TOKEN_TEMP}=; expires=${expires}; path=/;`;
+      deleteCookie(COOKIE_NAMES.GITHUB_TOKEN_TEMP, { path: "/" });
       router.refresh();
     }
 
