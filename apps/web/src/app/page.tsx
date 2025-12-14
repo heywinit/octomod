@@ -1,7 +1,6 @@
 "use client";
 import { ChevronDown, ExternalLink, Github } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -13,7 +12,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { description, faqItems, roadmap } from "@/lib/home-content";
 
 export default function HomePage() {
-  const router = useRouter();
   const roadmapTabRef = useRef<HTMLButtonElement>(null);
   const faqTabRef = useRef<HTMLButtonElement>(null);
   const [tabValue, setTabValue] = useState("roadmap");
@@ -41,10 +39,6 @@ export default function HomePage() {
       }
 
       switch (e.key.toLowerCase()) {
-        case "o":
-          e.preventDefault();
-          router.push("/");
-          break;
         case "v":
           e.preventDefault();
           window.open("https://github.com/heywinit/octomod", "_blank");
@@ -62,7 +56,7 @@ export default function HomePage() {
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [router]);
+  }, []);
   return (
     <div className="flex min-h-screen w-screen flex-col bg-background px-6 pt-12 pb-4 md:px-8 md:pt-48">
       <div className="mx-auto flex w-full max-w-xl flex-1 flex-col space-y-12 md:space-y-16">
