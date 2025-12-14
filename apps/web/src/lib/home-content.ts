@@ -98,3 +98,4 @@ export const faqItems = [
       "No. Not at all. I'm in university and I barely get to work on Octomod. Octomod is a dashboard and interface layer on top of GitHub. You'll still use GitHub for git operations, code reviews, and repository management. Octomod just provides a better way to view and interact with your GitHub data.",
   },
 ] as const;
+

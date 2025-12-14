@@ -1,10 +1,11 @@
 import type { MetadataRoute } from "next";
+import { description } from "@/lib/home-content";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "octomod",
-    short_name: "octomod",
-    description: "my pwa app",
+    name: "Octomod",
+    short_name: "Octomod",
+    description: description,
     start_url: "/new",
     display: "standalone",
     background_color: "#ffffff",

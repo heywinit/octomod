@@ -1,36 +1,49 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
-import "../index.css";
-import { ConditionalSidebar } from "@/components/conditional-sidebar";
-import Providers from "@/components/providers";
+import { Inter } from "next/font/google";
 
-const geist = Geist({
-  variable: "--font-geist",
+const inter = Inter({
   subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
+  variable: "--font-inter",
+  display: "swap",
 });
 
 export const metadata: Metadata = {
-  title: "octomod",
-  description: "octomod",
+  title: "Octomod",
+  description:
+    "A faster, more customizable GitHub dashboard built for developers. Open source alternative to GitHub's default dashboard with better UX and developer-focused features.",
+  keywords: [
+    "GitHub",
+    "dashboard",
+    "developer tools",
+    "open source",
+    "developer dashboard",
+  ],
+  openGraph: {
+    title: "Octomod",
+    description:
+      "A faster, more customizable GitHub dashboard built for developers.",
+    type: "website",
+    url: "https://octomod.xyz",
+  },
+  twitter: {
+    card: "summary",
+    title: "Octomod",
+    description:
+      "A faster, more customizable GitHub dashboard built for developers.",
+  },
 };
 
-export default function RootLayout({
+export default function HomeLayout({
   children,
-}: Readonly<{
+}: {
   children: React.ReactNode;
-}>) {
+}) {
   return (
-    <html lang="en" suppressHydrationWarning>
-      <body className={`${geist.variable} ${geistMono.variable} antialiased`}>
-        <Providers>
-          <ConditionalSidebar>{children}</ConditionalSidebar>
-        </Providers>
-      </body>
-    </html>
+    <div
+      className={inter.variable}
+      style={{ fontFamily: "var(--font-inter), sans-serif" }}
+    >
+      {children}
+    </div>
   );
 }
