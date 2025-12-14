@@ -13,7 +13,6 @@ Octomod is a GitHub utility web app that aims to provide a better dashboard to d
 - Write clean and structured code as this is an open source project
 - Use TypeScript with proper types
 - Follow Next.js 16 best practices
-- Use server components when possible, client components only when needed for interactivity
 
 ## GitHub Integration
 
