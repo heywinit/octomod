@@ -61,7 +61,7 @@ export default function HomePage() {
     <div className="flex min-h-screen w-screen flex-col bg-background px-8 pt-8 pb-4 md:px-6 md:pt-48">
       <div className="mx-auto flex w-full max-w-xl flex-1 flex-col space-y-8 md:space-y-12">
         {/* Main content */}
-        <div className="mb-4 space-y-2 md:space-y-4">
+        <div className="mb-4 space-y-2">
           <div className="flex items-center justify-between gap-4">
             <h1 className="font-semibold text-3xl text-primary tracking-tight md:text-5xl">
               Octomod

@@ -59,3 +59,5 @@ export function createErrorRedirect(
 ): NextResponse {
   return NextResponse.redirect(new URL(`/?error=${error}`, request.url));
 }
+
+
