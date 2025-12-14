@@ -1,10 +1,17 @@
+import { Analytics } from "@vercel/analytics/react";
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import "@/index.css";
+import { Geist, Geist_Mono } from "next/font/google";
+import Providers from "@/components/providers";
 
-const inter = Inter({
+const geist = Geist({
+  variable: "--font-geist",
   subsets: ["latin"],
-  variable: "--font-inter",
-  display: "swap",
+});
+
+const geistMono = Geist_Mono({
+  variable: "--font-geist-mono",
+  subsets: ["latin"],
 });
 
 export const metadata: Metadata = {
@@ -39,11 +46,11 @@ export default function HomeLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div
-      className={inter.variable}
-      style={{ fontFamily: "var(--font-inter), sans-serif" }}
-    >
-      {children}
-    </div>
+    <html lang="en" suppressHydrationWarning>
+      <body className={`${geist.variable} ${geistMono.variable} antialiased`}>
+        <Providers>{children}</Providers>
+      </body>
+      <Analytics />
+    </html>
   );
 }

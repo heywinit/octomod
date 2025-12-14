@@ -20,6 +20,7 @@
     "@trpc/client": "catalog:",
     "@trpc/server": "catalog:",
     "@trpc/tanstack-react-query": "^11.5.0",
+    "@vercel/analytics": "^1.6.1",
     "babel-plugin-react-compiler": "^1.0.0",
     "better-auth": "catalog:",
     "class-variance-authority": "^0.7.1",
