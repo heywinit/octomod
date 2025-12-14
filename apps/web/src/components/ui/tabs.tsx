@@ -80,12 +80,16 @@ interface TabsTriggerProps {
   className?: string;
 }
 
-export function TabsTrigger({ value, children, className }: TabsTriggerProps) {
+export const TabsTrigger = React.forwardRef<
+  HTMLButtonElement,
+  TabsTriggerProps
+>(({ value, children, className }, ref) => {
   const { value: selectedValue, onValueChange } = useTabsContext();
   const isSelected = selectedValue === value;
 
   return (
     <button
+      ref={ref}
       type="button"
       onClick={() => onValueChange(value)}
       className={cn(
@@ -101,7 +105,9 @@ export function TabsTrigger({ value, children, className }: TabsTriggerProps) {
       {children}
     </button>
   );
-}
+});
+
+TabsTrigger.displayName = "TabsTrigger";
 
 interface TabsContentProps {
   value: string;

@@ -19,7 +19,7 @@ export const roadmap = [
       },
       {
         id: "5",
-        label: "Fast indexed data (no slow GitHub pages)",
+        label: "Faster file reading",
         completed: false,
       },
       {
@@ -39,46 +39,34 @@ export const roadmap = [
       },
     ],
   },
-  {
-    id: "post-mvp",
-    label: "Post-MVP",
-    completed: false,
-    items: [
-      {
-        id: "y",
-        label: <span className="text-primary">Suggest here</span>,
-        completed: false,
-      },
-    ],
-  },
 ] as const;
 
 export const faqItems = [
   {
     id: "get-started",
-    question: "How do I get started?",
+    question: "Why?",
     answer:
-      'Click "Open Octomod" above to launch the app. You\'ll need to authenticate with your GitHub account to get started. No installation required.',
+      "I'm just tired of the GitHub home page and jumping through multiple links for a specific page. I tried to counter it by using direct repo URLs but I was still in need for a full proof solution.",
   },
   {
     id: "data-security",
     question: "Is my data secure?",
     answer:
-      "Yes. Octomod only uses GitHub's official REST API and stores your OAuth token locally in your browser. We don't store any of your data on our servers. Your GitHub data stays with GitHub.",
+      "Yes. Octomod is simply a GitHub REST API wrappers. It stores your OAuth token locally along with the sync engine's local copy of your GitHub data in your browser. Your GitHub data stays with GitHub and the device you use Octomod on.",
   },
   {
     id: "permissions",
     question: "What permissions does Octomod need?",
     answer:
-      "Octomod requests read access to your repositories, issues, and pull requests. This is required to display your GitHub data in the dashboard. You can revoke access at any time from your GitHub settings.",
+      "Octomod requests read access to your repositories, issues, and pull requests. Wherever possible, Octomod asks for read access only. This is required to display your GitHub data in the dashboard. You can revoke access at any time from your GitHub settings.",
   },
   {
     id: "contribute",
     question: "Can I contribute?",
     answer: (
       <>
-        Absolutely! Octomod is open source and we welcome contributions. Check
-        out the{" "}
+        Absolutely! Octomod is open source and contributors are most welcome.
+        Check out the{" "}
         <Link
           href="https://github.com/heywinit/octomod"
           target="_blank"
@@ -86,15 +74,27 @@ export const faqItems = [
         >
           GitHub repository
         </Link>{" "}
-        to get started. You can also suggest features or report bugs via GitHub
-        Issues.
+        to get started. You can also suggest features or report bugs via{" "}
+        <Link
+          href="https://github.com/heywinit/octomod/issues"
+          target="_blank"
+          className="text-primary hover:underline"
+        >
+          GitHub Issues
+        </Link>
       </>
     ),
+  },
+  {
+    id: "development-pace",
+    question: "What's the development pace like?",
+    answer:
+      "I'm currently a university student with a part-time job, so most of my time is dedicated to work. I work on Octomod in my free time whenever I can, which means development progresses steadily but at a pace that fits around my other commitments. I'm committed to building this project thoughtfully.",
   },
   {
     id: "replace-github",
     question: "Will this replace GitHub?",
     answer:
-      "No. Octomod is a dashboard and interface layer on top of GitHub. You'll still use GitHub for git operations, code reviews, and repository management. Octomod just provides a better way to view and interact with your GitHub data.",
+      "No. Not at all. I'm in university and I barely get to work on Octomod. Octomod is a dashboard and interface layer on top of GitHub. You'll still use GitHub for git operations, code reviews, and repository management. Octomod just provides a better way to view and interact with your GitHub data.",
   },
 ] as const;
