@@ -1,6 +1,6 @@
 @import "tailwindcss";
 @import "tw-animate-css";
-@import './theme.css';
+@import "./theme.css";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -14,7 +14,6 @@
 }
 
 :root {
-
   --sidebar: hsl(0 0% 98%);
 
   --sidebar-foreground: hsl(240 5.3% 26.1%);
@@ -33,7 +32,6 @@
 }
 
 .dark {
-
   --sidebar: hsl(240 5.9% 10%);
 
   --sidebar-foreground: hsl(240 4.8% 95.9%);
@@ -52,7 +50,6 @@
 }
 
 @theme inline {
-
   --color-sidebar: var(--sidebar);
 
   --color-sidebar-foreground: var(--sidebar-foreground);

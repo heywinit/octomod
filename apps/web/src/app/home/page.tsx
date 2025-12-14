@@ -75,7 +75,7 @@ export default function HomePage() {
           </p>
 
           <div className="flex items-center gap-3">
-            <Button asChild className="gap-2">
+            <Button asChild className="gap-2 pr-1.5 pl-2.5">
               <Link href="/">
                 Open Octomod
                 <kbd className="pointer-events-none ml-1 hidden h-5 select-none items-center gap-1 rounded border border-secondary bg-secondary px-1.5 font-medium font-mono text-[10px] opacity-100 sm:inline-flex">
@@ -83,8 +83,13 @@ export default function HomePage() {
                 </kbd>
               </Link>
             </Button>
-            <Button variant="outline" className="gap-2" asChild>
-              <Link href="https://github.com/heywinit/octomod" target="_blank">
+            <Button variant="outline" className="gap-2 pr-1.5 pl-2">
+              <Link
+                href="https://github.com/heywinit/octomod"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-2"
+              >
                 <Github className="h-4 w-4" />
                 <span className="hidden sm:inline">View Source</span>
                 <kbd className="pointer-events-none mr-0 ml-1 hidden h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-medium font-mono text-[10px] opacity-100 sm:inline-flex">
@@ -98,13 +103,17 @@ export default function HomePage() {
         {/* Tabs */}
         <Tabs defaultValue="roadmap" className="w-full">
           <TabsList className="w-full justify-start">
-            <TabsTrigger value="roadmap" ref={roadmapTabRef}>
+            <TabsTrigger
+              value="roadmap"
+              ref={roadmapTabRef}
+              className="pr-1.5 pl-2"
+            >
               Roadmap
               <kbd className="pointer-events-none ml-1.5 hidden h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-medium font-mono text-[10px] opacity-100 sm:inline-flex">
                 <span className="text-xs">R</span>
               </kbd>
             </TabsTrigger>
-            <TabsTrigger value="faq" ref={faqTabRef}>
+            <TabsTrigger value="faq" ref={faqTabRef} className="pr-1.5 pl-2">
               FAQ
               <kbd className="pointer-events-none ml-1.5 hidden h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-medium font-mono text-[10px] opacity-100 sm:inline-flex">
                 <span className="text-xs">F</span>

@@ -49,33 +49,37 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
-    // Check for OAuth callback token in cookie
-    const callbackToken = getCookie(COOKIE_NAMES.GITHUB_TOKEN_TEMP);
+    const checkAuth = async () => {
+      // Check for OAuth callback token in cookie
+      const callbackToken = await getCookie(COOKIE_NAMES.GITHUB_TOKEN_TEMP);
 
-    if (callbackToken) {
-      localStorage.setItem(STORAGE_KEYS.GITHUB_TOKEN, callbackToken);
-      // Clear the cookie
-      deleteCookie(COOKIE_NAMES.GITHUB_TOKEN_TEMP, { path: "/" });
-      router.refresh();
-    }
+      if (callbackToken) {
+        localStorage.setItem(STORAGE_KEYS.GITHUB_TOKEN, callbackToken);
+        // Clear the cookie
+        await deleteCookie(COOKIE_NAMES.GITHUB_TOKEN_TEMP, { path: "/" });
+        router.refresh();
+      }
 
-    // Check if user is authenticated
-    const token = getGitHubToken();
-    if (token) {
-      setIsAuthenticated(true);
-      loadRepositories(token);
-    } else {
-      setIsLoading(false);
-    }
+      // Check if user is authenticated
+      const token = getGitHubToken();
+      if (token) {
+        setIsAuthenticated(true);
+        loadRepositories(token);
+      } else {
+        setIsLoading(false);
+      }
 
-    // Check for error in URL
-    const urlParams = new URLSearchParams(window.location.search);
-    const errorParam = urlParams.get("error");
-    if (errorParam) {
-      setError(`Authentication error: ${errorParam}`);
-      // Clean up URL
-      window.history.replaceState({}, "", "/");
-    }
+      // Check for error in URL
+      const urlParams = new URLSearchParams(window.location.search);
+      const errorParam = urlParams.get("error");
+      if (errorParam) {
+        setError(`Authentication error: ${errorParam}`);
+        // Clean up URL
+        window.history.replaceState({}, "", "/");
+      }
+    };
+
+    checkAuth();
   }, [router, loadRepositories]);
 
   const handleLogin = () => {

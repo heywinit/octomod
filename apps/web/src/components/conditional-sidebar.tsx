@@ -17,4 +17,3 @@ export function ConditionalSidebar({
 
   return <AppSidebar>{children}</AppSidebar>;
 }
-
