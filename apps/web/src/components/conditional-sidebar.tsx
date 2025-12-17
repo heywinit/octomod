@@ -1,6 +1,6 @@
 "use client";
 
-import { usePathname } from "next/navigation";
+import { useRouter } from "@tanstack/react-router";
 import { AppSidebar } from "@/components/app-sidebar";
 
 export function ConditionalSidebar({
@@ -8,7 +8,8 @@ export function ConditionalSidebar({
 }: {
   children: React.ReactNode;
 }) {
-  const pathname = usePathname();
+  const router = useRouter();
+  const pathname = router.state.location.pathname;
   const isMarketingPage = pathname?.startsWith("/home");
 
   if (isMarketingPage) {

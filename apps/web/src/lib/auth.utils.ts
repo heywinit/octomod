@@ -1,5 +1,3 @@
-import type { NextRequest } from "next/server";
-import { NextResponse } from "next/server";
 import { API_ROUTES } from "./constants";
 
 /**
@@ -23,10 +21,11 @@ export function validateGitHubConfig(): {
 /**
  * Gets the GitHub redirect URI, using environment variable or constructing from request
  */
-export function getRedirectUri(request: NextRequest): string {
+export function getRedirectUri(request: Request): string {
+  const origin = new URL(request.url).origin;
   return (
     process.env.GITHUB_REDIRECT_URI ||
-    `${request.nextUrl.origin}${API_ROUTES.AUTH.GITHUB.CALLBACK}`
+    `${origin}${API_ROUTES.AUTH.GITHUB.CALLBACK}`
   );
 }
 
@@ -54,11 +53,14 @@ export function createCookieConfig(options: {
  * Creates an error redirect response
  */
 export function createErrorRedirect(
-  request: NextRequest,
+  request: Request,
   error: string,
-): NextResponse {
-  return NextResponse.redirect(new URL(`/?error=${error}`, request.url));
+): Response {
+  return Response.redirect(new URL(`/?error=${error}`, request.url));
 }
+
+
+
 
 
 

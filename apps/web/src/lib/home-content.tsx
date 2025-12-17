@@ -1,5 +1,3 @@
-import Link from "next/link";
-
 export const description =
   "Octomod is a faster, more customizable GitHub dashboard built for developers. It uses the GitHub REST API and a sync engine to give you the information you care about without the clutter. Still in active development, fully open source.";
 
@@ -67,21 +65,23 @@ export const faqItems = [
       <>
         Absolutely! Octomod is open source and contributors are most welcome.
         Check out the{" "}
-        <Link
+        <a
           href="https://github.com/heywinit/octomod"
           target="_blank"
+          rel="noopener noreferrer"
           className="text-primary hover:underline"
         >
           GitHub repository
-        </Link>{" "}
+        </a>{" "}
         to get started. You can also suggest features or report bugs via{" "}
-        <Link
+        <a
           href="https://github.com/heywinit/octomod/issues"
           target="_blank"
+          rel="noopener noreferrer"
           className="text-primary hover:underline"
         >
           GitHub Issues
-        </Link>
+        </a>
       </>
     ),
   },

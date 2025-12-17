@@ -1,6 +1,7 @@
-"use client";
+import { createFileRoute } from "@tanstack/react-router";
+
+
 import { ChevronDown, ExternalLink, Github } from "lucide-react";
-import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -11,7 +12,12 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { description, faqItems, roadmap } from "@/lib/home-content";
 
-export default function HomePage() {
+export const Route = createFileRoute("/")({
+	component: HomePage,
+});
+
+
+function HomePage() {
   const roadmapTabRef = useRef<HTMLButtonElement>(null);
   const faqTabRef = useRef<HTMLButtonElement>(null);
   const [tabValue, setTabValue] = useState("roadmap");
@@ -107,7 +113,7 @@ export default function HomePage() {
                 value="source"
                 className="h-min gap-2 bg-background/50 pr-1.5 pl-2"
               >
-                <Link
+                <a
                   href="https://github.com/heywinit/octomod"
                   target="_blank"
                   rel="noopener noreferrer"
@@ -120,7 +126,7 @@ export default function HomePage() {
                   <kbd className="pointer-events-none mr-0 ml-1 hidden h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-medium font-mono text-[10px] text-muted-foreground opacity-100 sm:inline-flex">
                     <span className="text-xs">V</span>
                   </kbd>
-                </Link>
+                </a>
               </TabsTrigger>
             </div>
           </TabsList>
@@ -211,13 +217,14 @@ export default function HomePage() {
           <div className="flex flex-col items-center justify-center gap-2 text-foreground/60 text-sm md:flex-row">
             <p className="text-foreground/40">
               Built by{" "}
-              <Link
+              <a
                 href="https://heywinit.me"
                 target="_blank"
+                rel="noopener noreferrer"
                 className="text-primary hover:underline"
               >
                 heywinit
-              </Link>
+              </a>
             </p>
             <span className="hidden text-foreground/40 md:inline">•</span>
             <p className="text-foreground/40">MIT License</p>
