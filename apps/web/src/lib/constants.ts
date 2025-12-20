@@ -34,3 +34,14 @@ export const COOKIE_NAMES = {
   GITHUB_OAUTH_STATE: "github_oauth_state",
   GITHUB_TOKEN_TEMP: "github_token_temp",
 } as const;
+
+/**
+ * GitHub Repository URLs
+ */
+export const GITHUB_REPO = {
+  URL: "https://github.com/heywinit/octomod",
+  ISSUES: "https://github.com/heywinit/octomod/issues",
+  NEW_ISSUE: "https://github.com/heywinit/octomod/issues/new",
+  getIssueUrl: (issueId: string | number) =>
+    `https://github.com/heywinit/octomod/issues/${issueId}`,
+} as const;
