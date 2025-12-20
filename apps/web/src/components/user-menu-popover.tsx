@@ -37,7 +37,7 @@ export function UserMenuPopover() {
           onMouseEnter={() => setIsOpen(true)}
           onMouseLeave={() => setIsOpen(false)}
         >
-          <Avatar className="h-8 w-8 transition-opacity hover:opacity-80">
+          <Avatar className="size-8 transition-opacity hover:opacity-80">
             <AvatarImage src={user?.avatar_url} alt={user?.name || user?.login || "User"} />
             <AvatarFallback>{userInitials}</AvatarFallback>
           </Avatar>
@@ -51,21 +51,21 @@ export function UserMenuPopover() {
         onMouseLeave={() => setIsOpen(false)}
       >
         <div className="flex flex-col gap-2">
-          <div className="flex items-center gap-3">
-            <Avatar className="size-10">
+          <Button variant="ghost" className="h-auto flex items-center justify-start gap-2 px-2 cursor-pointer">
+            <Avatar className="size-8">
               <AvatarImage src={user?.avatar_url} alt={user?.name || user?.login || "User"} />
               <AvatarFallback>{userInitials}</AvatarFallback>
             </Avatar>
             <div className="flex flex-1 flex-col min-w-0">
-              <p className="font-semibold text-sm truncate">{userName}</p>
+              <p className="font-semibold text-sm truncate text-left">{userName}</p>
             </div>
-          </div>
+          </Button>
 
           <Separator />
 
           <Button
             variant="ghost"
-            className="w-full justify-start text-destructive hover:text-destructive hover:bg-destructive/10"
+            className="w-full justify-start text-destructive hover:text-destructive hover:bg-destructive/10 cursor-pointer"
             onClick={handleLogout}
           >
             <LogOut className="h-4 w-4" />
