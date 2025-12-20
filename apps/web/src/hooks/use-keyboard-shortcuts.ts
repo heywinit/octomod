@@ -1,5 +1,5 @@
-import { useEffect } from "react";
 import { useNavigate } from "@tanstack/react-router";
+import { useEffect } from "react";
 
 export function useKeyboardShortcuts() {
   const navigate = useNavigate();
@@ -70,4 +70,3 @@ export function useKeyboardShortcuts() {
     };
   }, [navigate]);
 }
-

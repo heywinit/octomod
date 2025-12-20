@@ -1,9 +1,13 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
 import { Search } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import { Input } from "@/components/ui/input";
-import { Popover, PopoverContent, PopoverAnchor } from "@/components/ui/popover";
+import {
+  Popover,
+  PopoverAnchor,
+  PopoverContent,
+} from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 
 export function SearchPopover() {
@@ -30,7 +34,7 @@ export function SearchPopover() {
       <Popover open={isOpen} onOpenChange={setIsOpen}>
         <PopoverAnchor asChild>
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground pointer-events-none z-10" />
+            <Search className="pointer-events-none absolute top-1/2 left-3 z-10 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               ref={inputRef}
               type="text"
@@ -38,15 +42,15 @@ export function SearchPopover() {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               onFocus={() => setIsOpen(true)}
-              className={cn("w-full pl-9 pr-20")}
+              className={cn("w-full pr-20 pl-9")}
             />
-            <kbd className="pointer-events-none absolute right-3 top-1/2 hidden -translate-y-1/2 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground opacity-100 sm:flex z-10">
+            <kbd className="pointer-events-none absolute top-1/2 right-3 z-10 hidden -translate-y-1/2 select-none items-center gap-1 rounded border bg-muted px-1.5 font-medium font-mono text-[10px] text-muted-foreground opacity-100 sm:flex">
               <span className="text-xs">⌘</span>K
             </kbd>
           </div>
         </PopoverAnchor>
         <PopoverContent
-          className="w-full max-w-2xl p-0 mt-1"
+          className="mt-1 w-full max-w-2xl p-0"
           align="start"
           side="bottom"
           sideOffset={4}
@@ -57,11 +61,11 @@ export function SearchPopover() {
         >
           <div className="p-2">
             {searchQuery.trim() ? (
-              <div className="p-4 text-center text-sm text-muted-foreground">
+              <div className="p-4 text-center text-muted-foreground text-sm">
                 Search functionality coming soon...
               </div>
             ) : (
-              <div className="p-4 text-center text-sm text-muted-foreground">
+              <div className="p-4 text-center text-muted-foreground text-sm">
                 Start typing to search...
               </div>
             )}
@@ -71,4 +75,3 @@ export function SearchPopover() {
     </div>
   );
 }
-

@@ -4,11 +4,9 @@ import { useEffect } from "react";
 import {
   ResponsiveDialog,
   ResponsiveDialogContent,
-  ResponsiveDialogDescription,
   ResponsiveDialogHeader,
   ResponsiveDialogTitle,
 } from "@/components/ui/revola";
-import { cn } from "@/lib/utils";
 
 interface KeyboardShortcut {
   keys: string[];
@@ -28,7 +26,7 @@ const shortcuts: KeyboardShortcut[] = [
 
 function Key({ children }: { children: React.ReactNode }) {
   return (
-    <kbd className="pointer-events-none inline-flex h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground opacity-100">
+    <kbd className="pointer-events-none inline-flex h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-medium font-mono text-[10px] text-muted-foreground opacity-100">
       {children}
     </kbd>
   );
@@ -63,32 +61,28 @@ export function KeyboardShortcutsDialog({
         <ResponsiveDialogHeader>
           <ResponsiveDialogTitle>Keyboard Shortcuts</ResponsiveDialogTitle>
         </ResponsiveDialogHeader>
-          <div className="py-1">
-            <div className="grid gap-1">
-              {shortcuts.map((shortcut, index) => (
-                <div
-                  key={index}
-                  className="flex items-center justify-between border-b pb-2 last:border-0 last:pb-0"
-                >
-                  <span className="text-sm text-muted-foreground">
-                    {shortcut.description}
-                  </span>
-                  <div className="flex items-center gap-1">
-                    {shortcut.keys.map((key, keyIndex) => (
-                      <div key={keyIndex} className="flex items-center gap-1">
-                        <Key>{key}</Key>
-                        {keyIndex < shortcut.keys.length - 1 && (
-                          <span className="text-muted-foreground">+</span>
-                        )}
-                      </div>
-                    ))}
-                  </div>
+        <div className="py-1">
+          <div className="grid gap-1">
+            {shortcuts.map((shortcut) => (
+              <div
+                key={shortcut.keys.join(" ")}
+                className="flex items-center justify-between border-b pb-2 last:border-0 last:pb-0"
+              >
+                <span className="text-muted-foreground text-sm">
+                  {shortcut.description}
+                </span>
+                <div className="flex items-center gap-1">
+                  {shortcut.keys.map((key) => (
+                    <div key={key} className="flex items-center gap-1">
+                      <Key>{key}</Key>
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
+              </div>
+            ))}
           </div>
+        </div>
       </ResponsiveDialogContent>
     </ResponsiveDialog>
   );
 }
-

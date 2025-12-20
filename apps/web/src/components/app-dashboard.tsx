@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { AppSidebar } from "@/components/app-sidebar";
 import { AppTopbar } from "@/components/app-topbar";
 import { KeyboardShortcutsDialog } from "@/components/keyboard-shortcuts-dialog";
@@ -37,9 +37,7 @@ export function AppDashboard({ children }: AppDashboardProps) {
       <AppSidebar />
       <SidebarInset>
         <AppTopbar />
-        <div className="flex flex-1 flex-col">
-          {children}
-        </div>
+        <div className="flex flex-1 flex-col">{children}</div>
       </SidebarInset>
       <KeyboardShortcutsDialog
         open={shortcutsOpen}
@@ -48,4 +46,3 @@ export function AppDashboard({ children }: AppDashboardProps) {
     </SidebarProvider>
   );
 }
-

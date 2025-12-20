@@ -1,7 +1,11 @@
+import { randomBytes } from "node:crypto";
 import { createFileRoute } from "@tanstack/react-router";
-import { validateGitHubConfig, getRedirectUri, createCookieConfig } from "@/lib/auth.utils";
-import { GITHUB_OAUTH, COOKIE_NAMES } from "@/lib/constants";
-import { randomBytes } from "crypto";
+import {
+  createCookieConfig,
+  getRedirectUri,
+  validateGitHubConfig,
+} from "@/lib/auth.utils";
+import { COOKIE_NAMES, GITHUB_OAUTH } from "@/lib/constants";
 
 export const Route = createFileRoute("/api/auth/github/login")({
   server: {
@@ -20,7 +24,7 @@ export const Route = createFileRoute("/api/auth/github/login")({
         const cookieConfig = createCookieConfig({ maxAge: 600 });
         const cookieParts = [
           `${COOKIE_NAMES.GITHUB_OAUTH_STATE}=${state}`,
-          `Path=/`,
+          "Path=/",
           `Max-Age=${cookieConfig.maxAge}`,
           `SameSite=${cookieConfig.sameSite}`,
         ];

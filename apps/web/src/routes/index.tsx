@@ -2,12 +2,13 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { AppDashboard } from "@/components/app-dashboard";
 import { LandingPage } from "@/components/landing-page";
-import { useAuthStore } from "@/stores/auth";
+import { Overview } from "@/components/overview";
 import { COOKIE_NAMES } from "@/lib/constants";
-import { getCookie, deleteCookie } from "@/lib/utils";
+import { deleteCookie, getCookie } from "@/lib/utils";
+import { useAuthStore } from "@/stores/auth";
 
 export const Route = createFileRoute("/")({
-	component: HomePage,
+  component: HomePage,
 });
 
 function HomePage() {
@@ -73,14 +74,7 @@ function HomePage() {
 
   return (
     <AppDashboard>
-      <div className="flex flex-1 flex-col gap-4 p-4 md:p-6">
-        <div className="flex flex-col gap-2">
-          <h1 className="text-2xl font-semibold tracking-tight">Home</h1>
-          <p className="text-muted-foreground">
-            Welcome to your Octomod dashboard. Start building your GitHub dashboard here.
-          </p>
-        </div>
-      </div>
+      <Overview />
     </AppDashboard>
   );
 }

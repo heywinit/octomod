@@ -1,6 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { validateGitHubConfig, getRedirectUri, createCookieConfig, createErrorRedirect } from "@/lib/auth.utils";
-import { GITHUB_OAUTH, COOKIE_NAMES } from "@/lib/constants";
+import {
+  createCookieConfig,
+  createErrorRedirect,
+  getRedirectUri,
+  validateGitHubConfig,
+} from "@/lib/auth.utils";
+import { COOKIE_NAMES, GITHUB_OAUTH } from "@/lib/constants";
 
 export const Route = createFileRoute("/api/auth/github/callback")({
   server: {
@@ -76,10 +81,13 @@ export const Route = createFileRoute("/api/auth/github/callback")({
 
           // Store token temporarily in a cookie (will be moved to localStorage by client)
           // This is a temporary solution - in production, you might want to use httpOnly cookies
-          const tokenCookieConfig = createCookieConfig({ httpOnly: false, maxAge: 60 }); // 1 minute
+          const tokenCookieConfig = createCookieConfig({
+            httpOnly: false,
+            maxAge: 60,
+          }); // 1 minute
           const tokenCookieParts = [
             `${COOKIE_NAMES.GITHUB_TOKEN_TEMP}=${accessToken}`,
-            `Path=/`,
+            "Path=/",
             `Max-Age=${tokenCookieConfig.maxAge}`,
             `SameSite=${tokenCookieConfig.sameSite}`,
           ];

@@ -52,15 +52,6 @@ export function createCookieConfig(options: {
 /**
  * Creates an error redirect response
  */
-export function createErrorRedirect(
-  request: Request,
-  error: string,
-): Response {
+export function createErrorRedirect(request: Request, error: string): Response {
   return Response.redirect(new URL(`/?error=${error}`, request.url));
 }
-
-
-
-
-
-

@@ -14,7 +14,7 @@ function UserProfilePage() {
     <AppDashboard>
       <div className="flex flex-1 flex-col gap-4 p-4 md:p-6">
         <div className="flex flex-col gap-2">
-          <h1 className="text-2xl font-semibold tracking-tight">
+          <h1 className="font-semibold text-2xl tracking-tight">
             {username === user?.login ? "Your Profile" : `@${username}`}
           </h1>
           <p className="text-muted-foreground">
@@ -26,7 +26,7 @@ function UserProfilePage() {
         {user && username === user.login && (
           <div className="mt-4 space-y-4">
             <div>
-              <h2 className="text-lg font-semibold">Profile Information</h2>
+              <h2 className="font-semibold text-lg">Profile Information</h2>
               <div className="mt-2 space-y-2 text-sm">
                 {user.name && (
                   <div>
@@ -51,7 +51,8 @@ function UserProfilePage() {
                   {user.public_repos}
                 </div>
                 <div>
-                  <span className="font-medium">Following:</span> {user.following}
+                  <span className="font-medium">Following:</span>{" "}
+                  {user.following}
                 </div>
               </div>
             </div>

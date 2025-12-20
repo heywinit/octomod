@@ -1,15 +1,23 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
-import { MessageSquare } from "lucide-react";
-import { toast } from "sonner";
 import { useLocation } from "@tanstack/react-router";
+import { MessageSquare } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { useAuthStore } from "@/stores/auth";
 
 export function FeedbackPopover() {
@@ -91,12 +99,7 @@ export function FeedbackPopover() {
   return (
     <Popover open={isOpen} onOpenChange={setIsOpen}>
       <PopoverTrigger asChild>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-9 w-9"
-          aria-label="Send feedback"
-        >
+        <Button variant="ghost" aria-label="Send feedback" size="icon">
           <MessageSquare className="h-4 w-4" />
         </Button>
       </PopoverTrigger>
@@ -107,7 +110,7 @@ export function FeedbackPopover() {
         onOpenAutoFocus={(e) => e.preventDefault()}
       >
         <div className="flex flex-col gap-2">
-          <p className="text-sm font-medium text-foreground">Feedback</p>
+          <p className="font-medium text-foreground text-sm">Feedback</p>
           <Textarea
             ref={textareaRef}
             placeholder="Send feedback..."
@@ -131,7 +134,7 @@ export function FeedbackPopover() {
                   />
                   <Label
                     htmlFor="include-extra-info"
-                    className="text-xs cursor-pointer text-muted-foreground"
+                    className="cursor-pointer text-muted-foreground text-xs"
                   >
                     Include analytics
                   </Label>
@@ -140,7 +143,7 @@ export function FeedbackPopover() {
               <TooltipContent side="top" className="max-w-xs">
                 <div className="flex flex-col gap-1 text-xs">
                   <p className="font-medium">Includes:</p>
-                  <ul className="list-disc list-inside space-y-0.5">
+                  <ul className="list-inside list-disc space-y-0.5">
                     <li>Current page ({location.pathname})</li>
                     <li>Browser info</li>
                     {user && (
@@ -167,4 +170,3 @@ export function FeedbackPopover() {
     </Popover>
   );
 }
-

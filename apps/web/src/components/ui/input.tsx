@@ -1,8 +1,13 @@
-import * as React from "react";
+import type * as React from "react";
 
 import { cn } from "@/lib/utils";
 
-function Input({ className, type, onKeyDown, ...props }: React.ComponentProps<"input">) {
+function Input({
+  className,
+  type,
+  onKeyDown,
+  ...props
+}: React.ComponentProps<"input">) {
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Escape") {
       e.currentTarget.blur();

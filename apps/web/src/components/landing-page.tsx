@@ -9,8 +9,8 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { API_ROUTES, GITHUB_REPO } from "@/lib/constants";
 import { description, faqItems, roadmap } from "@/lib/home-content";
-import { GITHUB_REPO, API_ROUTES } from "@/lib/constants";
 
 export function LandingPage() {
   const roadmapTabRef = useRef<HTMLButtonElement>(null);
@@ -115,9 +115,10 @@ export function LandingPage() {
             </div>
             <div className="flex items-center gap-2">
               <button
+                type="button"
                 ref={loginButtonRef}
                 onClick={handleLogin}
-                className="inline-flex items-center cursor-pointer justify-center gap-1 rounded-md px-2.5 py-1.5 text-sm font-medium transition-colors bg-primary/80 text-primary-foreground hover:bg-primary/70 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 md:pr-1.5 md:pl-2"
+                className="inline-flex cursor-pointer items-center justify-center gap-1 rounded-md bg-primary/80 px-2.5 py-1.5 font-medium text-primary-foreground text-sm transition-colors hover:bg-primary/70 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 md:pr-1.5 md:pl-2"
               >
                 <span className="hidden sm:inline">Login</span>
                 <kbd className="pointer-events-none mr-0 ml-1 hidden h-5 select-none items-center gap-1 rounded border border-primary/50 bg-primary/50 px-1.5 font-medium font-mono text-[10px] text-primary-foreground opacity-100 sm:inline-flex">
@@ -249,4 +250,3 @@ export function LandingPage() {
     </div>
   );
 }
-

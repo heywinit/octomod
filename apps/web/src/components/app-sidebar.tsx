@@ -1,17 +1,17 @@
 "use client";
 
+import { Link, useLocation } from "@tanstack/react-router";
 import {
+  Activity,
+  Building2,
+  FolderGit2,
   Github,
   Home,
   Inbox,
   Search,
-  Activity,
-  Building2,
   Settings,
-  FolderGit2,
 } from "lucide-react";
 import * as React from "react";
-import { Link, useLocation } from "@tanstack/react-router";
 import {
   Sidebar,
   SidebarContent,
@@ -24,7 +24,7 @@ import {
 
 function Key({ children }: { children: React.ReactNode }) {
   return (
-    <kbd className="pointer-events-none inline-flex h-4 select-none items-center gap-0.5 rounded border bg-muted px-1 font-mono text-[10px] font-medium text-muted-foreground opacity-100">
+    <kbd className="pointer-events-none inline-flex h-4 select-none items-center gap-0.5 rounded border bg-muted px-1 font-medium font-mono text-[10px] text-muted-foreground opacity-100">
       {children}
     </kbd>
   );
@@ -34,8 +34,8 @@ function formatShortcut(shortcut: string): React.ReactNode {
   const keys = shortcut.split(" ");
   return (
     <div className="flex items-center gap-1">
-      {keys.map((key, index) => (
-        <React.Fragment key={index}>
+      {keys.map((key) => (
+        <React.Fragment key={key}>
           <Key>{key}</Key>
         </React.Fragment>
       ))}
@@ -89,11 +89,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   return (
     <Sidebar collapsible="icon" {...props}>
       <SidebarHeader>
-        <SidebarMenuButton
-          size="lg"
-          asChild
-          tooltip="Octomod"
-        >
+        <SidebarMenuButton size="lg" asChild tooltip="Octomod">
           <Link to="/">
             <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
               <Github className="size-4" />
@@ -104,10 +100,12 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           </Link>
         </SidebarMenuButton>
       </SidebarHeader>
-      <SidebarContent className="flex flex-col gap-1 items-center">
-        <SidebarMenu className="flex flex-col gap-1 items-center">
+      <SidebarContent className="flex flex-col items-center gap-1">
+        <SidebarMenu className="flex flex-col items-center gap-1">
           {navItems.map((item) => {
-            const isActive = currentPath === item.url || (item.url === "/" && currentPath === "/");
+            const isActive =
+              currentPath === item.url ||
+              (item.url === "/" && currentPath === "/");
             return (
               <SidebarMenuItem key={item.title} className="w-min">
                 <SidebarMenuButton
