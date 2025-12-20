@@ -118,7 +118,7 @@ export function LandingPage() {
                 type="button"
                 ref={loginButtonRef}
                 onClick={handleLogin}
-                className="inline-flex cursor-pointer items-center justify-center gap-1 rounded-md bg-primary/80 px-2.5 py-1.5 font-medium text-primary-foreground text-sm transition-colors hover:bg-primary/70 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 md:pr-1.5 md:pl-2"
+                className="inline-flex cursor-pointer items-center justify-center gap-1 rounded-sm bg-primary/80 px-2.5 py-1.5 font-medium text-primary-foreground text-sm transition-colors hover:bg-primary/70 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 md:pr-1.5 md:pl-2"
               >
                 <span className="hidden sm:inline">Login</span>
                 <kbd className="pointer-events-none mr-0 ml-1 hidden h-5 select-none items-center gap-1 rounded border border-primary/50 bg-primary/50 px-1.5 font-medium font-mono text-[10px] text-primary-foreground opacity-100 sm:inline-flex">
@@ -171,7 +171,7 @@ export function LandingPage() {
                         href={href}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="group flex w-full cursor-pointer items-center justify-between gap-3 rounded-sm p-2 pr-3 pl-2.5 text-left hover:bg-accent/50"
+                        className="group flex w-full cursor-pointer items-center justify-between gap-3 rounded p-2 pr-3 pl-2.5 text-left hover:bg-accent/50"
                       >
                         <div className="flex items-center gap-3">
                           <Checkbox

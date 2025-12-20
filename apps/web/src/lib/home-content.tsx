@@ -1,7 +1,7 @@
 import { GITHUB_REPO } from "./constants";
 
 export const description =
-  "Octomod is a faster, more customizable GitHub dashboard built for developers. It uses the GitHub REST API and a sync engine to give you the information you care about without the clutter. Still in active development, fully open source.";
+  "Octomod is a better way to use GitHub. It syncs your GitHub data locally so everything loads instantly, and keeps it updated in the background. It uses the GitHub REST API and a sync engine to give you the information you care about without the clutter. Built with a UX focused on what developers actually need. Still in active development, fully open source.";
 
 export const roadmap = [
   {
