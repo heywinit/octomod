@@ -90,12 +90,14 @@ export const Route = createFileRoute("/api/auth/github/callback")({
 
           // Redirect to home page with success
           // The client will read the token from the cookie and store it in localStorage
+          const headers = new Headers();
+          headers.set("Location", "/?auth=success");
+          headers.append("Set-Cookie", clearCookieString);
+          headers.append("Set-Cookie", tokenCookieString);
+
           return new Response(null, {
             status: 302,
-            headers: {
-              Location: "/?auth=success",
-              "Set-Cookie": [clearCookieString, tokenCookieString].join(", "),
-            },
+            headers,
           });
         } catch (error) {
           console.error("OAuth callback error:", error);

@@ -1,153 +1,124 @@
 "use client";
 
 import {
-  AudioWaveform,
-  BookOpen,
-  Bot,
-  Command,
-  GalleryVerticalEnd,
   Github,
-  Settings2,
-  SquareTerminal,
+  Home,
+  Inbox,
+  Search,
+  Activity,
+  Building2,
+  Settings,
+  FolderGit2,
 } from "lucide-react";
 import type * as React from "react";
-import { NavMain } from "@/components/nav-main";
+import { Link, useLocation } from "@tanstack/react-router";
 import {
   Sidebar,
   SidebarContent,
+  SidebarFooter,
   SidebarHeader,
+  SidebarMenu,
   SidebarMenuButton,
-  SidebarRail,
+  SidebarMenuItem,
 } from "@/components/ui/sidebar";
 
-// This is sample data.
-const data = {
-  teams: [
-    {
-      name: "Acme Inc",
-      logo: GalleryVerticalEnd,
-      plan: "Enterprise",
-    },
-    {
-      name: "Acme Corp.",
-      logo: AudioWaveform,
-      plan: "Startup",
-    },
-    {
-      name: "Evil Corp.",
-      logo: Command,
-      plan: "Free",
-    },
-  ],
-  navMain: [
-    {
-      title: "Playground",
-      url: "#",
-      icon: SquareTerminal,
-      isActive: true,
-      items: [
-        {
-          title: "History",
-          url: "#",
-        },
-        {
-          title: "Starred",
-          url: "#",
-        },
-        {
-          title: "Settings",
-          url: "#",
-        },
-      ],
-    },
-    {
-      title: "Models",
-      url: "#",
-      icon: Bot,
-      items: [
-        {
-          title: "Genesis",
-          url: "#",
-        },
-        {
-          title: "Explorer",
-          url: "#",
-        },
-        {
-          title: "Quantum",
-          url: "#",
-        },
-      ],
-    },
-    {
-      title: "Documentation",
-      url: "#",
-      icon: BookOpen,
-      items: [
-        {
-          title: "Introduction",
-          url: "#",
-        },
-        {
-          title: "Get Started",
-          url: "#",
-        },
-        {
-          title: "Tutorials",
-          url: "#",
-        },
-        {
-          title: "Changelog",
-          url: "#",
-        },
-      ],
-    },
-    {
-      title: "Settings",
-      url: "#",
-      icon: Settings2,
-      items: [
-        {
-          title: "General",
-          url: "#",
-        },
-        {
-          title: "Team",
-          url: "#",
-        },
-        {
-          title: "Billing",
-          url: "#",
-        },
-        {
-          title: "Limits",
-          url: "#",
-        },
-      ],
-    },
-  ],
-};
+const navItems = [
+  {
+    title: "Home",
+    url: "/",
+    icon: Home,
+    shortcut: "g h",
+  },
+  {
+    title: "Inbox",
+    url: "/inbox",
+    icon: Inbox,
+    shortcut: "g i",
+  },
+  {
+    title: "Repos",
+    url: "/repos",
+    icon: FolderGit2,
+    shortcut: "g r",
+  },
+  {
+    title: "Search",
+    url: "/search",
+    icon: Search,
+    shortcut: "g s",
+  },
+  {
+    title: "Activity",
+    url: "/activity",
+    icon: Activity,
+    shortcut: "g a",
+  },
+  {
+    title: "Orgs",
+    url: "/orgs",
+    icon: Building2,
+    shortcut: "g o",
+  },
+];
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+  const location = useLocation();
+  const currentPath = location.pathname;
+
   return (
     <Sidebar collapsible="icon" {...props}>
       <SidebarHeader>
         <SidebarMenuButton
           size="lg"
-          className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+          asChild
+          tooltip="Octomod"
         >
-          <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
-            <Github className="size-4" />
-          </div>
-          <div className="grid flex-1 text-left text-sm leading-tight">
-            <span className="truncate font-medium">Octomod</span>
-          </div>
+          <Link to="/">
+            <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
+              <Github className="size-4" />
+            </div>
+            <div className="grid flex-1 text-left text-sm leading-tight">
+              <span className="truncate font-medium">Octomod</span>
+            </div>
+          </Link>
         </SidebarMenuButton>
       </SidebarHeader>
-      <SidebarContent>
-        <NavMain items={data.navMain} />
+      <SidebarContent className="flex flex-col gap-1 items-center">
+        <SidebarMenu className="flex flex-col gap-1 items-center">
+          {navItems.map((item) => {
+            const isActive = currentPath === item.url || (item.url === "/" && currentPath === "/");
+            return (
+              <SidebarMenuItem key={item.title} className="w-min">
+                <SidebarMenuButton
+                  asChild
+                  tooltip={item.title}
+                  isActive={isActive}
+                >
+                  <Link to={item.url}>
+                    <item.icon />
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            );
+          })}
+        </SidebarMenu>
       </SidebarContent>
-      <SidebarRail />
+      <SidebarFooter>
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuButton
+              asChild
+              tooltip="Settings"
+              isActive={currentPath === "/settings"}
+            >
+              <Link to="/settings">
+                <Settings />
+                <span>Settings</span>
+              </Link>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        </SidebarMenu>
+      </SidebarFooter>
     </Sidebar>
   );
 }

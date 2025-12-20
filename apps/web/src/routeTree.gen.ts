@@ -9,10 +9,52 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as SettingsRouteImport } from './routes/settings'
+import { Route as SearchRouteImport } from './routes/search'
+import { Route as ReposRouteImport } from './routes/repos'
+import { Route as OrgsRouteImport } from './routes/orgs'
+import { Route as InboxRouteImport } from './routes/inbox'
+import { Route as ActivityRouteImport } from './routes/activity'
+import { Route as UsernameRouteImport } from './routes/$username'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ApiAuthGithubLoginRouteImport } from './routes/api/auth/github/login'
 import { Route as ApiAuthGithubCallbackRouteImport } from './routes/api/auth/github/callback'
 
+const SettingsRoute = SettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SearchRoute = SearchRouteImport.update({
+  id: '/search',
+  path: '/search',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ReposRoute = ReposRouteImport.update({
+  id: '/repos',
+  path: '/repos',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OrgsRoute = OrgsRouteImport.update({
+  id: '/orgs',
+  path: '/orgs',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const InboxRoute = InboxRouteImport.update({
+  id: '/inbox',
+  path: '/inbox',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ActivityRoute = ActivityRouteImport.update({
+  id: '/activity',
+  path: '/activity',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const UsernameRoute = UsernameRouteImport.update({
+  id: '/$username',
+  path: '/$username',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
@@ -31,36 +73,144 @@ const ApiAuthGithubCallbackRoute = ApiAuthGithubCallbackRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/$username': typeof UsernameRoute
+  '/activity': typeof ActivityRoute
+  '/inbox': typeof InboxRoute
+  '/orgs': typeof OrgsRoute
+  '/repos': typeof ReposRoute
+  '/search': typeof SearchRoute
+  '/settings': typeof SettingsRoute
   '/api/auth/github/callback': typeof ApiAuthGithubCallbackRoute
   '/api/auth/github/login': typeof ApiAuthGithubLoginRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/$username': typeof UsernameRoute
+  '/activity': typeof ActivityRoute
+  '/inbox': typeof InboxRoute
+  '/orgs': typeof OrgsRoute
+  '/repos': typeof ReposRoute
+  '/search': typeof SearchRoute
+  '/settings': typeof SettingsRoute
   '/api/auth/github/callback': typeof ApiAuthGithubCallbackRoute
   '/api/auth/github/login': typeof ApiAuthGithubLoginRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/$username': typeof UsernameRoute
+  '/activity': typeof ActivityRoute
+  '/inbox': typeof InboxRoute
+  '/orgs': typeof OrgsRoute
+  '/repos': typeof ReposRoute
+  '/search': typeof SearchRoute
+  '/settings': typeof SettingsRoute
   '/api/auth/github/callback': typeof ApiAuthGithubCallbackRoute
   '/api/auth/github/login': typeof ApiAuthGithubLoginRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/api/auth/github/callback' | '/api/auth/github/login'
+  fullPaths:
+    | '/'
+    | '/$username'
+    | '/activity'
+    | '/inbox'
+    | '/orgs'
+    | '/repos'
+    | '/search'
+    | '/settings'
+    | '/api/auth/github/callback'
+    | '/api/auth/github/login'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/api/auth/github/callback' | '/api/auth/github/login'
-  id: '__root__' | '/' | '/api/auth/github/callback' | '/api/auth/github/login'
+  to:
+    | '/'
+    | '/$username'
+    | '/activity'
+    | '/inbox'
+    | '/orgs'
+    | '/repos'
+    | '/search'
+    | '/settings'
+    | '/api/auth/github/callback'
+    | '/api/auth/github/login'
+  id:
+    | '__root__'
+    | '/'
+    | '/$username'
+    | '/activity'
+    | '/inbox'
+    | '/orgs'
+    | '/repos'
+    | '/search'
+    | '/settings'
+    | '/api/auth/github/callback'
+    | '/api/auth/github/login'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  UsernameRoute: typeof UsernameRoute
+  ActivityRoute: typeof ActivityRoute
+  InboxRoute: typeof InboxRoute
+  OrgsRoute: typeof OrgsRoute
+  ReposRoute: typeof ReposRoute
+  SearchRoute: typeof SearchRoute
+  SettingsRoute: typeof SettingsRoute
   ApiAuthGithubCallbackRoute: typeof ApiAuthGithubCallbackRoute
   ApiAuthGithubLoginRoute: typeof ApiAuthGithubLoginRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/settings': {
+      id: '/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof SettingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/search': {
+      id: '/search'
+      path: '/search'
+      fullPath: '/search'
+      preLoaderRoute: typeof SearchRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/repos': {
+      id: '/repos'
+      path: '/repos'
+      fullPath: '/repos'
+      preLoaderRoute: typeof ReposRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/orgs': {
+      id: '/orgs'
+      path: '/orgs'
+      fullPath: '/orgs'
+      preLoaderRoute: typeof OrgsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/inbox': {
+      id: '/inbox'
+      path: '/inbox'
+      fullPath: '/inbox'
+      preLoaderRoute: typeof InboxRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/activity': {
+      id: '/activity'
+      path: '/activity'
+      fullPath: '/activity'
+      preLoaderRoute: typeof ActivityRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/$username': {
+      id: '/$username'
+      path: '/$username'
+      fullPath: '/$username'
+      preLoaderRoute: typeof UsernameRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -87,6 +237,13 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  UsernameRoute: UsernameRoute,
+  ActivityRoute: ActivityRoute,
+  InboxRoute: InboxRoute,
+  OrgsRoute: OrgsRoute,
+  ReposRoute: ReposRoute,
+  SearchRoute: SearchRoute,
+  SettingsRoute: SettingsRoute,
   ApiAuthGithubCallbackRoute: ApiAuthGithubCallbackRoute,
   ApiAuthGithubLoginRoute: ApiAuthGithubLoginRoute,
 }

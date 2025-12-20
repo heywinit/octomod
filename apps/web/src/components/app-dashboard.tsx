@@ -1,24 +1,51 @@
 "use client";
 
-import { ConditionalSidebar } from "@/components/conditional-sidebar";
+import { useState, useEffect } from "react";
+import { AppSidebar } from "@/components/app-sidebar";
+import { AppTopbar } from "@/components/app-topbar";
+import { KeyboardShortcutsDialog } from "@/components/keyboard-shortcuts-dialog";
+import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
+import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts";
+
+interface AppDashboardProps {
+  children?: React.ReactNode;
+}
 
 /**
- * App Dashboard - Main dashboard for authenticated users
- * This is a placeholder component that you can build out with your actual dashboard content
+ * App Dashboard Layout - Main layout for authenticated users
+ * Includes sidebar, topbar, and keyboard shortcuts
  */
-export function AppDashboard() {
+export function AppDashboard({ children }: AppDashboardProps) {
+  const [shortcutsOpen, setShortcutsOpen] = useState(false);
+  useKeyboardShortcuts();
+
+  // Handle Shift+? to open shortcuts dialog
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.shiftKey && e.key === "?") {
+        e.preventDefault();
+        setShortcutsOpen(true);
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, []);
+
   return (
-    <ConditionalSidebar>
-      <div className="flex flex-1 flex-col gap-4 p-4 md:p-6">
-        <div className="flex flex-col gap-2">
-          <h1 className="text-2xl font-semibold tracking-tight">Dashboard</h1>
-          <p className="text-muted-foreground">
-            Welcome to your Octomod dashboard. Start building your GitHub dashboard here.
-          </p>
+    <SidebarProvider defaultOpen={false}>
+      <AppSidebar />
+      <SidebarInset>
+        <AppTopbar />
+        <div className="flex flex-1 flex-col">
+          {children}
         </div>
-        {/* Add your dashboard content here */}
-      </div>
-    </ConditionalSidebar>
+      </SidebarInset>
+      <KeyboardShortcutsDialog
+        open={shortcutsOpen}
+        onOpenChange={setShortcutsOpen}
+      />
+    </SidebarProvider>
   );
 }
 
