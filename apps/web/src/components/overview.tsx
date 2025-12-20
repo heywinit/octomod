@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronDown, GitPullRequest, AlertCircle } from "lucide-react";
+import { ChevronDown, GitPullRequest, AlertCircle, RefreshCw } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { useEffect, useState } from "react";
 import {
@@ -8,19 +8,20 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import {
-  type DashboardData,
-  fetchDashboardData,
-  type Issue,
-  type PinnedRepository,
-  type RecentActivity,
-  type CIAlert,
-  type HealthSnapshot,
-} from "@/lib/dashboard.service";
 import { cn } from "@/lib/utils";
 import { usePinnedRepos } from "@/stores/pinned-repos";
 import { useAuthStore } from "@/stores/auth";
 import { getContextualGreeting } from "luh-calm-greet";
+import { Button } from "@/components/ui/button";
+import {
+  useSyncEngine,
+  useDashboardMetrics,
+  useCIAlerts,
+  useActivityFeed,
+  usePinnedReposEnriched,
+  type CIAlert,
+} from "@/lib/sync";
+import { formatTimeAgo } from "@/lib/dashboard.service";
 
 /**
  * CI/CD Alerts Banner Component
@@ -97,7 +98,21 @@ function CIAlertsBanner({ alerts }: { alerts: CIAlert[] }) {
  * Compact Issue Card Component
  * Actionable, 1-line title, repo name + status pills
  */
-function IssueCard({ issue }: { issue: Issue }) {
+function IssueCard({
+  issue,
+}: {
+  issue: {
+    id: string;
+    number: number;
+    title: string;
+    repository: string;
+    state: "open" | "closed";
+    url: string;
+    timeAgo: string;
+    labels?: string[];
+    waitingOnYou?: boolean;
+  };
+}) {
   return (
     <a
       href={issue.url}
@@ -139,7 +154,16 @@ function IssueCard({ issue }: { issue: Issue }) {
  * Activity Feed Item Component
  * Visually quieter, no avatars, high context
  */
-function ActivityItem({ activity }: { activity: RecentActivity }) {
+function ActivityItem({
+  activity,
+}: {
+  activity: {
+    id: string;
+    title: string;
+    description: string;
+    updatedAt: string;
+  };
+}) {
   return (
     <div className="flex items-start justify-between gap-3 rounded-lg bg-muted/20 px-3 py-2">
       <div className="flex min-w-0 flex-1 flex-col gap-0.5">
@@ -147,7 +171,7 @@ function ActivityItem({ activity }: { activity: RecentActivity }) {
         <span className="text-muted-foreground text-xs">{activity.description}</span>
       </div>
       <span className="shrink-0 text-muted-foreground text-xs">
-        {activity.timeAgo}
+        {formatTimeAgo(new Date(activity.updatedAt))}
       </span>
     </div>
   );
@@ -157,7 +181,19 @@ function ActivityItem({ activity }: { activity: RecentActivity }) {
  * Pinned Repository Card Component
  * Shows CI status, PR/issue counts, last activity
  */
-function PinnedRepositoryCard({ repo }: { repo: PinnedRepository }) {
+function PinnedRepositoryCard({
+  repo,
+}: {
+  repo: {
+    id: string;
+    name: string;
+    owner: string;
+    fullName: string;
+    ciStatus?: "passing" | "failing" | "pending" | "unknown";
+    openIssueCount?: number;
+    lastActivity?: string;
+  };
+}) {
   const getCIStatusColor = (status?: string) => {
     switch (status) {
       case "passing":
@@ -173,7 +209,7 @@ function PinnedRepositoryCard({ repo }: { repo: PinnedRepository }) {
 
   return (
     <a
-      href={repo.url}
+      href={`https://github.com/${repo.fullName}`}
       target="_blank"
       rel="noopener noreferrer"
       className="flex flex-col gap-2 rounded-lg bg-muted/30 p-3 transition-colors hover:bg-muted/50"
@@ -195,12 +231,6 @@ function PinnedRepositoryCard({ repo }: { repo: PinnedRepository }) {
         </div>
       </div>
       <div className="flex items-center gap-3 text-muted-foreground text-xs">
-        {repo.openPrCount !== undefined && (
-          <span className="flex items-center gap-1">
-            <GitPullRequest className="size-3" />
-            {repo.openPrCount}
-          </span>
-        )}
         {repo.openIssueCount !== undefined && (
           <span className="flex items-center gap-1">
             <AlertCircle className="size-3" />
@@ -208,7 +238,9 @@ function PinnedRepositoryCard({ repo }: { repo: PinnedRepository }) {
           </span>
         )}
         {repo.lastActivity && (
-          <span className="ml-auto">{repo.lastActivity}</span>
+          <span className="ml-auto">
+            {formatTimeAgo(new Date(repo.lastActivity))}
+          </span>
         )}
       </div>
     </a>
@@ -216,46 +248,52 @@ function PinnedRepositoryCard({ repo }: { repo: PinnedRepository }) {
 }
 
 /**
- * Quick Health Snapshot Component
+ * Sync Status Indicator
  */
-function HealthSnapshot({ snapshot }: { snapshot?: HealthSnapshot }) {
-  if (!snapshot) {
-    return null;
-  }
+function SyncStatusIndicator({
+  syncStatus,
+  lastSyncAt,
+  onRefresh,
+  isRefreshing,
+}: {
+  syncStatus: string;
+  lastSyncAt?: number;
+  onRefresh: () => void;
+  isRefreshing: boolean;
+}) {
+  const getStatusText = () => {
+    switch (syncStatus) {
+      case "syncing":
+        return "Syncing...";
+      case "rate-limited":
+        return "Rate limited";
+      case "offline":
+        return "Offline";
+      case "error":
+        return "Sync error";
+      default:
+        return lastSyncAt
+          ? `Updated ${formatTimeAgo(new Date(lastSyncAt))}`
+          : "Ready";
+    }
+  };
 
-  if (snapshot.allSystemsGreen) {
-    return (
-      <div className="rounded-lg bg-green-500/10 px-3 py-2">
-        <span className="text-green-600 text-sm dark:text-green-500">
-          All systems green
-        </span>
-      </div>
-    );
-  }
-
-  if (snapshot.reposNeedingAttention && snapshot.reposNeedingAttention > 0) {
-    return (
-      <div className="rounded-lg bg-yellow-500/10 px-3 py-2">
-        <span className="text-yellow-600 text-sm dark:text-yellow-500">
-          {snapshot.reposNeedingAttention} repo
-          {snapshot.reposNeedingAttention !== 1 ? "s" : ""} need attention
-        </span>
-      </div>
-    );
-  }
-
-  if (snapshot.staleRepos && snapshot.staleRepos > 0) {
-    return (
-      <div className="rounded-lg bg-muted/50 px-3 py-2">
-        <span className="text-muted-foreground text-sm">
-          {snapshot.staleRepos} repo{snapshot.staleRepos !== 1 ? "s" : ""} hasn't been
-          touched in {snapshot.staleDays || 14} days
-        </span>
-      </div>
-    );
-  }
-
-  return null;
+  return (
+    <div className="flex items-center gap-2">
+      <span className="text-muted-foreground text-xs">{getStatusText()}</span>
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={onRefresh}
+        disabled={isRefreshing || syncStatus === "syncing"}
+        className="h-7 w-7 p-0"
+      >
+        <RefreshCw
+          className={cn("size-3.5", isRefreshing && "animate-spin")}
+        />
+      </Button>
+    </div>
+  );
 }
 
 /**
@@ -263,11 +301,38 @@ function HealthSnapshot({ snapshot }: { snapshot?: HealthSnapshot }) {
  * 3:1 two-column layout with CI alerts, issues, activity, and pinned repos
  */
 export function Overview() {
-  const [data, setData] = useState<DashboardData | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const { pinnedRepos } = usePinnedRepos();
   const { user } = useAuthStore();
   const [greeting, setGreeting] = useState("");
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  // Sync engine
+  const {
+    syncStatus,
+    lastSyncAt,
+    refresh,
+    issues,
+    fetchWorkflowsForPinned,
+  } = useSyncEngine();
+
+  // Derived data from cache
+  const metrics = useDashboardMetrics();
+  const ciAlerts = useCIAlerts();
+  const activityFeed = useActivityFeed(10);
+  const pinnedReposEnriched = usePinnedReposEnriched();
+  const { pinnedRepos } = usePinnedRepos();
+
+  // Fetch workflows for pinned repos on mount
+  useEffect(() => {
+    if (pinnedRepos.length > 0) {
+      fetchWorkflowsForPinned(
+        pinnedRepos.map((r) => ({
+          owner: r.owner,
+          name: r.name,
+          fullName: r.fullName,
+        }))
+      );
+    }
+  }, [pinnedRepos, fetchWorkflowsForPinned]);
 
   useEffect(() => {
     if (user) {
@@ -279,43 +344,38 @@ export function Overview() {
     }
   }, [user]);
 
-  useEffect(() => {
-    const loadData = async () => {
-      try {
-        const dashboardData = await fetchDashboardData();
-        // Merge pinned repos from store into dashboard data
-        const pinnedReposData: PinnedRepository[] = pinnedRepos
-          .slice(0, 5)
-          .map((repo) => ({
-            id: repo.id,
-            name: repo.name,
-            owner: repo.owner,
-            fullName: repo.fullName,
-            description: repo.description,
-            language: repo.language,
-            stargazersCount: repo.stargazersCount,
-            updatedAt: repo.updatedAt,
-            url: `https://github.com/${repo.fullName}`,
-            ciStatus: "unknown" as const,
-            openPrCount: 0,
-            openIssueCount: 0,
-            lastActivity: "recently",
-          }));
-        setData({
-          ...dashboardData,
-          pinnedRepositories: pinnedReposData,
-        });
-      } catch (error) {
-        console.error("Failed to load dashboard data:", error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      await refresh();
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
 
-    loadData();
-  }, [pinnedRepos]);
+  // Transform cached issues to display format
+  const recentIssues = Object.values(issues.byId)
+    .filter((issue) => issue.state === "open" && !issue.isPullRequest)
+    .sort(
+      (a, b) =>
+        new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
+    )
+    .slice(0, 7)
+    .map((issue) => ({
+      id: String(issue.id),
+      number: issue.number,
+      title: issue.title,
+      repository: issue.repositoryFullName,
+      state: issue.state,
+      url: issue.htmlUrl,
+      timeAgo: formatTimeAgo(new Date(issue.updatedAt)),
+      labels: issue.labels.map((l) => l.name),
+      waitingOnYou: issue.assignees.some((a) => a.login === user?.login),
+    }));
 
-  if (isLoading || !data) {
+  const isLoading = syncStatus === "syncing" && Object.keys(issues.byId).length === 0;
+
+  if (isLoading) {
     return (
       <div className="flex flex-1 items-center justify-center">
         <div className="text-muted-foreground">Loading...</div>
@@ -323,21 +383,24 @@ export function Overview() {
     );
   }
 
-  const recentIssues = data.issues.slice(0, 7);
-  const recentActivity = data.recentActivity;
-
   return (
     <div className="flex flex-1 flex-col p-4 md:p-6">
       <div className="mx-auto w-full max-w-7xl mt-16">
         {/* Header */}
-        <div className="mb-4">
+        <div className="mb-4 flex items-center justify-between">
           <h1 className="font-semibold text-4xl tracking-tight">
             {greeting || "Overview"}
           </h1>
+          <SyncStatusIndicator
+            syncStatus={syncStatus}
+            lastSyncAt={lastSyncAt}
+            onRefresh={handleRefresh}
+            isRefreshing={isRefreshing}
+          />
         </div>
 
         {/* CI/CD Alerts - Full Width, Sticky */}
-        <CIAlertsBanner alerts={data.ciAlerts || []} />
+        <CIAlertsBanner alerts={ciAlerts} />
 
         {/* 3:1 Two Column Layout */}
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-[3fr_1.5fr]">
@@ -368,9 +431,9 @@ export function Overview() {
               <h2 className="text-muted-foreground text-xs font-medium uppercase tracking-wide">
                 Activity Feed
               </h2>
-              {recentActivity.length > 0 ? (
+              {activityFeed.length > 0 ? (
                 <div className="flex flex-col gap-1.5">
-                  {recentActivity.map((activity) => (
+                  {activityFeed.map((activity) => (
                     <ActivityItem key={activity.id} activity={activity} />
                   ))}
                 </div>
@@ -395,7 +458,7 @@ export function Overview() {
                     </span>
                   </div>
                   <span className="font-semibold text-2xl text-foreground">
-                    {data.openIssuesCount ?? 0}
+                    {metrics.openIssues}
                   </span>
                 </CardContent>
               </Card>
@@ -408,7 +471,7 @@ export function Overview() {
                     </span>
                   </div>
                   <span className="font-semibold text-2xl text-foreground">
-                    {data.openPrsCount ?? 0}
+                    {metrics.openPRs}
                   </span>
                 </CardContent>
               </Card>
@@ -419,9 +482,9 @@ export function Overview() {
               <h2 className="text-muted-foreground text-xs font-medium uppercase tracking-wide">
                 Pinned Repositories
               </h2>
-              {data.pinnedRepositories.length > 0 ? (
+              {pinnedReposEnriched.length > 0 ? (
                 <div className="flex flex-col gap-1.5">
-                  {data.pinnedRepositories.map((repo) => (
+                  {pinnedReposEnriched.slice(0, 5).map((repo) => (
                     <PinnedRepositoryCard key={repo.id} repo={repo} />
                   ))}
                 </div>
@@ -434,9 +497,14 @@ export function Overview() {
               )}
             </div>
 
-            {/* Quick Health Snapshot */}
-            {data.healthSnapshot && (
-              <HealthSnapshot snapshot={data.healthSnapshot} />
+            {/* Health Snapshot */}
+            {metrics.reposNeedingAttention > 0 && (
+              <div className="rounded-lg bg-yellow-500/10 px-3 py-2">
+                <span className="text-yellow-600 text-sm dark:text-yellow-500">
+                  {metrics.reposNeedingAttention} repo
+                  {metrics.reposNeedingAttention !== 1 ? "s" : ""} need attention
+                </span>
+              </div>
             )}
           </div>
         </div>
