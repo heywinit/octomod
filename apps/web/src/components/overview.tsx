@@ -203,12 +203,7 @@ export function Overview() {
             </div>
 
             {/* Pinned Repositories */}
-            <div className="flex flex-col gap-2">
-              <h2 className="text-muted-foreground text-xs font-medium uppercase tracking-wide">
-                Pinned Repositories
-              </h2>
-              <PinnedRepositories pinnedReposEnriched={pinnedReposEnriched} />
-            </div>
+            <PinnedRepositories pinnedReposEnriched={pinnedReposEnriched} />
 
             {/* Health Snapshot */}
             {metrics.reposNeedingAttention > 0 && (
