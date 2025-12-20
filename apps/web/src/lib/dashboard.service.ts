@@ -45,6 +45,7 @@ export interface Issue {
   timeAgo: string;
   url: string;
   labels?: string[];
+  waitingOnYou?: boolean;
 }
 
 export interface PinnedRepository {
@@ -57,6 +58,26 @@ export interface PinnedRepository {
   stargazersCount?: number;
   updatedAt?: string;
   url: string;
+  ciStatus?: "passing" | "failing" | "pending" | "unknown";
+  openPrCount?: number;
+  openIssueCount?: number;
+  lastActivity?: string;
+}
+
+export interface CIAlert {
+  id: string;
+  repository: string;
+  branch: string;
+  workflow: string;
+  status: "failure" | "error" | "warning";
+  url: string;
+}
+
+export interface HealthSnapshot {
+  reposNeedingAttention?: number;
+  allSystemsGreen?: boolean;
+  staleRepos?: number;
+  staleDays?: number;
 }
 
 export interface DashboardData {
@@ -66,6 +87,8 @@ export interface DashboardData {
   recentActivity: RecentActivity[];
   issues: Issue[];
   pinnedRepositories: PinnedRepository[];
+  ciAlerts: CIAlert[];
+  healthSnapshot?: HealthSnapshot;
 }
 
 /**
@@ -125,6 +148,8 @@ export async function fetchDashboardData(): Promise<DashboardData> {
     recentActivity: [],
     issues: [],
     pinnedRepositories: [],
+    ciAlerts: [],
+    healthSnapshot: undefined,
   };
 }
 

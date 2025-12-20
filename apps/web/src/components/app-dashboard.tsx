@@ -6,6 +6,7 @@ import { AppTopbar } from "@/components/app-topbar";
 import { KeyboardShortcutsDialog } from "@/components/keyboard-shortcuts-dialog";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts";
+import Providers from "./providers";
 
 interface AppDashboardProps {
   children?: React.ReactNode;
@@ -33,7 +34,7 @@ export function AppDashboard({ children }: AppDashboardProps) {
   }, []);
 
   return (
-    <SidebarProvider defaultOpen={false}>
+    <Providers>
       <AppSidebar />
       <SidebarInset>
         <AppTopbar />
@@ -41,8 +42,8 @@ export function AppDashboard({ children }: AppDashboardProps) {
       </SidebarInset>
       <KeyboardShortcutsDialog
         open={shortcutsOpen}
-        onOpenChange={setShortcutsOpen}
-      />
-    </SidebarProvider>
+          onOpenChange={setShortcutsOpen}
+        />
+    </Providers>
   );
 }

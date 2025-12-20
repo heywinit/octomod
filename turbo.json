@@ -7,10 +7,12 @@
       "inputs": ["$TURBO_DEFAULT$", ".env*"],
       "outputs": ["dist/**"],
       "env": [
-        "BETTER_AUTH_SECRET",
-        "BETTER_AUTH_URL",
         "CORS_ORIGIN",
-        "DATABASE_URL"
+        "DATABASE_URL",
+        "GITHUB_CLIENT_ID",
+        "GITHUB_CLIENT_SECRET",
+        "GITHUB_WEBHOOK_SECRET",
+        "GITHUB_REDIRECT_URI"
       ]
     },
     "lint": {

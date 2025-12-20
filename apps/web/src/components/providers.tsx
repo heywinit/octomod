@@ -7,12 +7,9 @@ import { Toaster } from "./ui/sonner";
 export default function Providers({ children }: { children: React.ReactNode }) {
   return (
     <ThemeProvider
-      attribute="class"
       defaultTheme="dark"
-      enableSystem
-      disableTransitionOnChange
     >
-      <SidebarProvider>{children}</SidebarProvider>
+      <SidebarProvider defaultOpen={false}>{children}</SidebarProvider>
       <Toaster richColors />
     </ThemeProvider>
   );
