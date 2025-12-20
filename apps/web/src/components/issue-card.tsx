@@ -28,7 +28,7 @@ export function IssueCard({ issue }: IssueCardProps) {
       target="_blank"
       rel="noopener noreferrer"
       className={cn(
-        "flex items-center justify-between gap-3 rounded-lg bg-muted/70 px-3 py-2 transition-colors hover:bg-muted",
+        "flex items-center justify-between gap-3 rounded-lg bg-muted/40 px-3 py-2 transition-colors hover:bg-muted",
         issue.waitingOnYou && "bg-yellow-500/5",
       )}
     >

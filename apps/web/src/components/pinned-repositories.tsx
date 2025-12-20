@@ -405,7 +405,7 @@ function RepositoryPickerDialog({
                   onClick={() => {
                     if (customRepo.data) handleTogglePin(customRepo.data);
                   }}
-                  className="flex cursor-pointer items-center justify-between gap-2 pr-2"
+                  className="flex cursor-pointer items-center bg-muted/70 rounded-md justify-between gap-2 pr-2"
                 >
                   <div className="flex-1">
                     <div className="font-medium text-sm">
@@ -454,7 +454,7 @@ function RepositoryPickerDialog({
                   <div
                     key={repo.id}
                     onClick={() => handleTogglePin(repoData)}
-                    className="flex cursor-pointer items-center justify-between gap-2 rounded-md pl-2 pr-4 py-2 hover:bg-muted/50"
+                    className="flex cursor-pointer items-center bg-muted/40 rounded-md justify-between gap-2 pl-2 pr-4 py-2 hover:bg-muted"
                   >
                     <div className="flex min-w-0 flex-1 flex-col gap-0.5">
                       <div className="flex items-center gap-2">
