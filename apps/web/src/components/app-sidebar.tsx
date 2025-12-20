@@ -10,7 +10,7 @@ import {
   Settings,
   FolderGit2,
 } from "lucide-react";
-import type * as React from "react";
+import * as React from "react";
 import { Link, useLocation } from "@tanstack/react-router";
 import {
   Sidebar,
@@ -21,6 +21,27 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
+
+function Key({ children }: { children: React.ReactNode }) {
+  return (
+    <kbd className="pointer-events-none inline-flex h-4 select-none items-center gap-0.5 rounded border bg-muted px-1 font-mono text-[10px] font-medium text-muted-foreground opacity-100">
+      {children}
+    </kbd>
+  );
+}
+
+function formatShortcut(shortcut: string): React.ReactNode {
+  const keys = shortcut.split(" ");
+  return (
+    <div className="flex items-center gap-1">
+      {keys.map((key, index) => (
+        <React.Fragment key={index}>
+          <Key>{key}</Key>
+        </React.Fragment>
+      ))}
+    </div>
+  );
+}
 
 const navItems = [
   {
@@ -91,7 +112,14 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               <SidebarMenuItem key={item.title} className="w-min">
                 <SidebarMenuButton
                   asChild
-                  tooltip={item.title}
+                  tooltip={{
+                    children: (
+                      <div className="flex items-center gap-2">
+                        <span>{item.title}</span>
+                        {formatShortcut(item.shortcut)}
+                      </div>
+                    ),
+                  }}
                   isActive={isActive}
                 >
                   <Link to={item.url}>
