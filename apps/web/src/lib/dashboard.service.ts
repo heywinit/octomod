@@ -91,6 +91,8 @@ export interface DashboardData {
   pinnedRepositories: PinnedRepository[];
   ciAlerts: CIAlert[];
   healthSnapshot?: HealthSnapshot;
+  openIssuesCount: number;
+  openPrsCount: number;
 }
 
 /**
@@ -114,15 +116,18 @@ export async function fetchDashboardData(): Promise<DashboardData> {
   }
 
   try {
+    // Get user first to use in search queries
+    const userResult = await octokit.rest.users.getAuthenticated();
+    const user = userResult.data;
+
     // Fetch data in parallel
     const [
-      userResponse,
       reposResponse,
       issuesResponse,
-      pullRequestsResponse,
+      openIssuesCountResponse,
+      openPrsCountResponse,
       notificationsResponse,
     ] = await Promise.allSettled([
-      octokit.rest.users.getAuthenticated(),
       octokit.rest.repos.listForAuthenticatedUser({
         sort: "updated",
         direction: "desc",
@@ -137,10 +142,12 @@ export async function fetchDashboardData(): Promise<DashboardData> {
         per_page: 30,
       }),
       octokit.rest.search.issuesAndPullRequests({
-        q: "is:pr is:open author:@me",
-        sort: "updated",
-        order: "desc",
-        per_page: 30,
+        q: `is:issue is:open involves:${user.login}`,
+        per_page: 1, // We only need the total_count
+      }),
+      octokit.rest.search.issuesAndPullRequests({
+        q: `is:pr is:open involves:${user.login}`,
+        per_page: 1, // We only need the total_count
       }),
       octokit.rest.activity.listNotificationsForAuthenticatedUser({
         all: false,
@@ -148,16 +155,18 @@ export async function fetchDashboardData(): Promise<DashboardData> {
       }),
     ]);
 
-    const user =
-      userResponse.status === "fulfilled" ? userResponse.value.data : null;
     const repos =
       reposResponse.status === "fulfilled" ? reposResponse.value.data : [];
     const issues =
       issuesResponse.status === "fulfilled" ? issuesResponse.value.data : [];
-    const pullRequests =
-      pullRequestsResponse.status === "fulfilled"
-        ? pullRequestsResponse.value.data.items || []
-        : [];
+    const openIssuesCount =
+      openIssuesCountResponse.status === "fulfilled"
+        ? openIssuesCountResponse.value.data.total_count || 0
+        : 0;
+    const openPrsCount =
+      openPrsCountResponse.status === "fulfilled"
+        ? openPrsCountResponse.value.data.total_count || 0
+        : 0;
     const notifications =
       notificationsResponse.status === "fulfilled"
         ? notificationsResponse.value.data
@@ -200,9 +209,6 @@ export async function fetchDashboardData(): Promise<DashboardData> {
         new Date(repo.updated_at).getTime() >
         Date.now() - 30 * 24 * 60 * 60 * 1000,
     ).length;
-
-    const openPrsCount = pullRequests.length;
-    const openIssuesCount = issues.filter((i: any) => !i.pull_request).length;
 
     // Format metrics
     const metrics: Metric[] = [
@@ -264,6 +270,8 @@ export async function fetchDashboardData(): Promise<DashboardData> {
       pinnedRepositories: [], // Will be merged from store in Overview component
       ciAlerts: [], // TODO: Implement CI status checking
       healthSnapshot: undefined, // TODO: Implement health snapshot
+      openIssuesCount: openIssuesCount,
+      openPrsCount: openPrsCount,
     };
   } catch (error) {
     console.error("Error fetching dashboard data:", error);
@@ -302,6 +310,8 @@ export async function fetchDashboardData(): Promise<DashboardData> {
       pinnedRepositories: [],
       ciAlerts: [],
       healthSnapshot: undefined,
+      openIssuesCount: 0,
+      openPrsCount: 0,
     };
   }
 }

@@ -5,6 +5,7 @@ import {
   Scripts,
 } from "@tanstack/react-router";
 import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
+import { Analytics } from "@vercel/analytics/react";
 import { Toaster } from "@/components/ui/sonner";
 import appCss from "../index.css?url";
 
@@ -58,6 +59,7 @@ function RootDocument() {
         <Outlet />
         <Toaster richColors />
         <TanStackRouterDevtools position="bottom-right" />
+        <Analytics />
         <Scripts />
       </body>
     </html>

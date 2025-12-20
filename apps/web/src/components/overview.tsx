@@ -1,6 +1,7 @@
 "use client";
 
 import { ChevronDown, GitPullRequest, AlertCircle } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
 import { useEffect, useState } from "react";
 import {
   Collapsible,
@@ -330,7 +331,7 @@ export function Overview() {
       <div className="mx-auto w-full max-w-7xl mt-16">
         {/* Header */}
         <div className="mb-4">
-          <h1 className="font-semibold text-2xl tracking-tight">
+          <h1 className="font-semibold text-4xl tracking-tight">
             {greeting || "Overview"}
           </h1>
         </div>
@@ -383,6 +384,36 @@ export function Overview() {
 
           {/* Context Column (Right) */}
           <div className="flex flex-col gap-4">
+            {/* Open Issues and PRs Cards */}
+            <div className="grid grid-cols-2 gap-2">
+              <Card>
+                <CardContent className="flex flex-col gap-1.5">
+                  <div className="flex items-center gap-2">
+                    <AlertCircle className="size-4 text-muted-foreground" />
+                    <span className="text-muted-foreground text-xs font-medium uppercase tracking-wide">
+                      Open Issues
+                    </span>
+                  </div>
+                  <span className="font-semibold text-2xl text-foreground">
+                    {data.openIssuesCount ?? 0}
+                  </span>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="flex flex-col gap-1.5">
+                  <div className="flex items-center gap-2">
+                    <GitPullRequest className="size-4 text-muted-foreground" />
+                    <span className="text-muted-foreground text-xs font-medium uppercase tracking-wide">
+                      Open PRs
+                    </span>
+                  </div>
+                  <span className="font-semibold text-2xl text-foreground">
+                    {data.openPrsCount ?? 0}
+                  </span>
+                </CardContent>
+              </Card>
+            </div>
+
             {/* Pinned Repositories */}
             <div className="flex flex-col gap-2">
               <h2 className="text-muted-foreground text-xs font-medium uppercase tracking-wide">
