@@ -7,13 +7,13 @@ import {
 import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
 import { Analytics } from "@vercel/analytics/react";
 import { Toaster } from "@/components/ui/sonner";
-import appCss from "../index.css?url";
 import { description } from "@/lib/home-content";
+import appCss from "../index.css?url";
 
 export type RouterAppContext = object;
 
 const siteName = "Octomod";
-const siteTitle = `Octomod`;
+const siteTitle = "Octomod";
 const siteDescription = description;
 
 export const Route = createRootRouteWithContext<RouterAppContext>()({

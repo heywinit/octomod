@@ -52,7 +52,7 @@ export const faqItems = [
     id: "data-security",
     question: "Is my data secure?",
     answer:
-      "Yes. Octomod is simply a GitHub REST API wrappers. It stores your OAuth token locally along with the sync engine's local copy of your GitHub data in your browser. Your GitHub data stays with GitHub and the device you use Octomod on.",
+      "Yes. Octomod is simply a GitHub REST API wrapper. It stores your OAuth token locally along with the sync engine's local copy of your GitHub data in your browser. Your GitHub data stays with GitHub and the device you use Octomod on. Later you will be able to optionally allow write access to certain actions like commenting on issues and PRs through Octomod.",
   },
   {
     id: "permissions",
@@ -97,6 +97,6 @@ export const faqItems = [
     id: "replace-github",
     question: "Will this replace GitHub?",
     answer:
-      "No. Not at all. I'm in university and I barely get to work on Octomod. Octomod is a dashboard and interface layer on top of GitHub. You'll still use GitHub for git operations, code reviews, and repository management. Octomod just provides a better way to view and interact with your GitHub data.",
+      "Hysterical question. No. Not at all. I'm in university and I barely get to work on Octomod. Octomod is a dashboard and interface layer on top of GitHub. You'll still use GitHub for git operations, code reviews, and repository management. Octomod just provides a better way to view and interact with your GitHub data.",
   },
 ] as const;
