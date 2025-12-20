@@ -61,7 +61,7 @@ function PinnedRepositoryCard({ repo }: PinnedRepositoryCardProps) {
       href={`https://github.com/${repo.fullName}`}
       target="_blank"
       rel="noopener noreferrer"
-      className="group flex items-center justify-between gap-2 rounded-md bg-muted/20 pl-2.5 pr-2 py-1.5 transition-colors hover:bg-muted/40"
+      className="group flex items-center justify-between gap-2 rounded-md bg-muted/70 pl-2.5 pr-2 py-1.5 transition-colors hover:bg-muted"
     >
       <div className="flex min-w-0 flex-1 items-center gap-2">
         <div
