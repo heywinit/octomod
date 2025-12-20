@@ -14,7 +14,6 @@ import type {
   CachedIssue,
   CachedPullRequest,
   CachedWorkflowRun,
-  CachedNotification,
   CachedOrg,
 } from "./types";
 
@@ -40,7 +39,6 @@ interface EntityCacheStore {
   issues: EntityState<CachedIssue>;
   pullRequests: EntityState<CachedPullRequest>;
   workflowRuns: EntityState<CachedWorkflowRun>;
-  notifications: EntityState<CachedNotification>;
   orgs: EntityState<CachedOrg>;
 
   // Sync metadata
@@ -56,25 +54,23 @@ interface EntityCacheStore {
   upsertPullRequests: (prs: CachedPullRequest[], meta?: Partial<SyncMeta>) => void;
   upsertWorkflowRun: (run: CachedWorkflowRun, meta?: Partial<SyncMeta>) => void;
   upsertWorkflowRuns: (runs: CachedWorkflowRun[], meta?: Partial<SyncMeta>) => void;
-  upsertNotification: (notification: CachedNotification, meta?: Partial<SyncMeta>) => void;
-  upsertNotifications: (notifications: CachedNotification[], meta?: Partial<SyncMeta>) => void;
   upsertOrg: (org: CachedOrg, meta?: Partial<SyncMeta>) => void;
   upsertOrgs: (orgs: CachedOrg[], meta?: Partial<SyncMeta>) => void;
 
   // Actions - Meta operations
   updateMeta: (
-    entityType: "repos" | "issues" | "pullRequests" | "workflowRuns" | "notifications" | "orgs",
+    entityType: "repos" | "issues" | "pullRequests" | "workflowRuns" | "orgs",
     entityId: string,
     meta: Partial<SyncMeta>
   ) => void;
   getMeta: (
-    entityType: "repos" | "issues" | "pullRequests" | "workflowRuns" | "notifications" | "orgs",
+    entityType: "repos" | "issues" | "pullRequests" | "workflowRuns" | "orgs",
     entityId: string
   ) => SyncMeta | undefined;
 
   // Actions - Cursor operations
   updateCursor: (
-    type: "user" | "notifications",
+    type: "user",
     value: number
   ) => void;
   updateOrgCursor: (orgLogin: string, value: number) => void;
@@ -95,7 +91,6 @@ interface EntityCacheStore {
   getPRsByRepo: (repoFullName: string) => CachedPullRequest[];
   getOpenIssues: () => CachedIssue[];
   getOpenPRs: () => CachedPullRequest[];
-  getUnreadNotifications: () => CachedNotification[];
 
   // Actions - Cache management
   clearAll: () => void;
@@ -114,7 +109,6 @@ export const useEntityCache = create<EntityCacheStore>()(
       issues: createEmptyEntityState<CachedIssue>(),
       pullRequests: createEmptyEntityState<CachedPullRequest>(),
       workflowRuns: createEmptyEntityState<CachedWorkflowRun>(),
-      notifications: createEmptyEntityState<CachedNotification>(),
       orgs: createEmptyEntityState<CachedOrg>(),
 
       cursors: {
@@ -328,55 +322,6 @@ export const useEntityCache = create<EntityCacheStore>()(
         });
       },
 
-      upsertNotification: (notification, meta) => {
-        set((state) => {
-          const id = notification.id;
-          const existingMeta = state.notifications.meta[id] || {};
-          const newMeta: SyncMeta = {
-            ...existingMeta,
-            ...meta,
-            lastFetchedAt: Date.now(),
-            githubUpdatedAt: notification.updatedAt,
-          };
-
-          return {
-            notifications: {
-              byId: { ...state.notifications.byId, [id]: notification },
-              meta: { ...state.notifications.meta, [id]: newMeta },
-              allIds: state.notifications.allIds.includes(id)
-                ? state.notifications.allIds
-                : [...state.notifications.allIds, id],
-            },
-          };
-        });
-      },
-
-      upsertNotifications: (notifications, meta) => {
-        set((state) => {
-          const newById = { ...state.notifications.byId };
-          const newMeta = { ...state.notifications.meta };
-          const newAllIds = [...state.notifications.allIds];
-
-          for (const notification of notifications) {
-            const id = notification.id;
-            newById[id] = notification;
-            newMeta[id] = {
-              ...(newMeta[id] || {}),
-              ...meta,
-              lastFetchedAt: Date.now(),
-              githubUpdatedAt: notification.updatedAt,
-            };
-            if (!newAllIds.includes(id)) {
-              newAllIds.push(id);
-            }
-          }
-
-          return {
-            notifications: { byId: newById, meta: newMeta, allIds: newAllIds },
-          };
-        });
-      },
-
       upsertOrg: (org, meta) => {
         set((state) => {
           const id = String(org.id);
@@ -562,16 +507,6 @@ export const useEntityCache = create<EntityCacheStore>()(
           );
       },
 
-      getUnreadNotifications: () => {
-        const { notifications } = get();
-        return Object.values(notifications.byId)
-          .filter((n) => n.unread)
-          .sort(
-            (a, b) =>
-              new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
-          );
-      },
-
       // =======================================================================
       // Cache Management
       // =======================================================================
@@ -582,7 +517,6 @@ export const useEntityCache = create<EntityCacheStore>()(
           issues: createEmptyEntityState<CachedIssue>(),
           pullRequests: createEmptyEntityState<CachedPullRequest>(),
           workflowRuns: createEmptyEntityState<CachedWorkflowRun>(),
-          notifications: createEmptyEntityState<CachedNotification>(),
           orgs: createEmptyEntityState<CachedOrg>(),
           cursors: { orgs: {}, repos: {} },
           syncState: {
@@ -620,7 +554,6 @@ export const useEntityCache = create<EntityCacheStore>()(
             issues: filterEntity(state.issues),
             pullRequests: filterEntity(state.pullRequests),
             workflowRuns: filterEntity(state.workflowRuns),
-            notifications: filterEntity(state.notifications),
             orgs: filterEntity(state.orgs),
           };
         });
@@ -634,7 +567,6 @@ export const useEntityCache = create<EntityCacheStore>()(
         issues: state.issues,
         pullRequests: state.pullRequests,
         workflowRuns: state.workflowRuns,
-        notifications: state.notifications,
         orgs: state.orgs,
         cursors: state.cursors,
         syncState: {

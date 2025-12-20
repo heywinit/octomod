@@ -271,38 +271,12 @@ export function useRecentRepos(limit = 10) {
 }
 
 // =============================================================================
-// Notification Selectors
-// =============================================================================
-
-/**
- * Get unread notifications grouped by reason
- */
-export function useNotificationsByReason() {
-  const { notifications } = useEntityCache();
-
-  return useMemo(() => {
-    const grouped: Record<string, typeof notifications.byId[string][]> = {};
-
-    for (const notification of Object.values(notifications.byId)) {
-      if (!notification.unread) continue;
-      const reason = notification.reason;
-      if (!grouped[reason]) {
-        grouped[reason] = [];
-      }
-      grouped[reason].push(notification);
-    }
-
-    return grouped;
-  }, [notifications.byId]);
-}
-
-// =============================================================================
 // Activity Feed Selector
 // =============================================================================
 
 interface ActivityItem {
   id: string;
-  type: "issue" | "pr" | "notification";
+  type: "issue" | "pr";
   title: string;
   description: string;
   updatedAt: string;
@@ -314,7 +288,7 @@ interface ActivityItem {
  * Generate activity feed from cached data
  */
 export function useActivityFeed(limit = 20) {
-  const { issues, pullRequests, notifications } = useEntityCache();
+  const { issues, pullRequests } = useEntityCache();
 
   return useMemo(() => {
     const activities: ActivityItem[] = [];
@@ -345,22 +319,6 @@ export function useActivityFeed(limit = 20) {
       });
     }
 
-    // Add notifications
-    for (const notification of Object.values(notifications.byId).slice(
-      0,
-      limit
-    )) {
-      activities.push({
-        id: `notification-${notification.id}`,
-        type: "notification",
-        title: notification.subject.title,
-        description: `${notification.repository.fullName} - ${notification.subject.type}`,
-        updatedAt: notification.updatedAt,
-        url: notification.repository.htmlUrl,
-        repository: notification.repository.fullName,
-      });
-    }
-
     // Sort by updated_at and deduplicate by repository + title
     const seen = new Set<string>();
     return activities
@@ -375,7 +333,7 @@ export function useActivityFeed(limit = 20) {
         return true;
       })
       .slice(0, limit);
-  }, [issues.byId, pullRequests.byId, notifications.byId, limit]);
+  }, [issues.byId, pullRequests.byId, limit]);
 }
 
 // =============================================================================
@@ -386,7 +344,6 @@ export interface DashboardMetrics {
   activeRepos: number;
   openIssues: number;
   openPRs: number;
-  unreadNotifications: number;
   reposNeedingAttention: number;
 }
 
@@ -394,7 +351,7 @@ export interface DashboardMetrics {
  * Compute dashboard metrics from cached data
  */
 export function useDashboardMetrics(): DashboardMetrics {
-  const { repos, issues, pullRequests, notifications } = useEntityCache();
+  const { repos, issues, pullRequests } = useEntityCache();
 
   return useMemo(() => {
     const now = Date.now();
@@ -412,10 +369,6 @@ export function useDashboardMetrics(): DashboardMetrics {
       (pr) => pr.state === "open"
     ).length;
 
-    const unreadNotifications = Object.values(notifications.byId).filter(
-      (n) => n.unread
-    ).length;
-
     // Repos needing attention = repos with failing CI or open issues
     const reposNeedingAttention = Object.values(repos.byId).filter((repo) => {
       const repoIssues = Object.values(issues.byId).filter(
@@ -431,10 +384,9 @@ export function useDashboardMetrics(): DashboardMetrics {
       activeRepos,
       openIssues,
       openPRs,
-      unreadNotifications,
       reposNeedingAttention,
     };
-  }, [repos.byId, issues.byId, pullRequests.byId, notifications.byId]);
+  }, [repos.byId, issues.byId, pullRequests.byId]);
 }
 
 // =============================================================================

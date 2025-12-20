@@ -12,7 +12,6 @@ import type {
   CachedIssue,
   CachedPullRequest,
   CachedWorkflowRun,
-  CachedNotification,
   CachedOrg,
 } from "./types";
 
@@ -232,24 +231,6 @@ function transformWorkflowRun(run: any): CachedWorkflowRun {
   };
 }
 
-function transformNotification(notification: any): CachedNotification {
-  return {
-    id: notification.id,
-    unread: notification.unread,
-    reason: notification.reason,
-    updatedAt: notification.updated_at,
-    subject: {
-      title: notification.subject.title,
-      url: notification.subject.url,
-      type: notification.subject.type,
-    },
-    repository: {
-      fullName: notification.repository.full_name,
-      htmlUrl: notification.repository.html_url,
-    },
-  };
-}
-
 function transformOrg(org: any): CachedOrg {
   return {
     id: org.id,
@@ -376,41 +357,6 @@ export async function fetchReviewRequests(
 
       return {
         data: response.data.items.map(transformPullRequest),
-        headers: response.headers as Record<string, unknown>,
-      };
-    },
-    { etag: options.etag }
-  );
-}
-
-/**
- * Fetch notifications
- */
-export async function fetchNotifications(
-  options: {
-    etag?: string;
-    all?: boolean;
-    since?: string;
-    perPage?: number;
-  } = {}
-): Promise<ConditionalFetchResult<CachedNotification[]>> {
-  const octokit = getOctokit();
-  if (!octokit) throw new Error("No authentication");
-
-  const { all = false, perPage = 50 } = options;
-
-  return conditionalRequest(
-    async () => {
-      const response =
-        await octokit.rest.activity.listNotificationsForAuthenticatedUser({
-          all,
-          per_page: perPage,
-          since: options.since,
-          headers: options.etag ? { "If-None-Match": options.etag } : undefined,
-        });
-
-      return {
-        data: response.data.map(transformNotification),
         headers: response.headers as Record<string, unknown>,
       };
     },

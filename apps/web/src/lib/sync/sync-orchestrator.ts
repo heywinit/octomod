@@ -10,7 +10,6 @@ import {
   fetchUserRepos,
   fetchUserIssues,
   fetchReviewRequests,
-  fetchNotifications,
   fetchUserOrgs,
   fetchRepoWorkflowRuns,
   fetchRateLimit,
@@ -19,8 +18,7 @@ import {
 } from "./github-api";
 import { FetchPriority, DEFAULT_SYNC_CONFIG } from "./types";
 import type { SyncEngineConfig } from "./types";
-import { useEffect, useCallback } from "react";
-import { useAuthStore } from "@/stores/auth";
+import { useCallback } from "react";
 
 // =============================================================================
 // Sync State
@@ -28,6 +26,7 @@ import { useAuthStore } from "@/stores/auth";
 
 let backgroundSyncInterval: ReturnType<typeof setInterval> | null = null;
 let isBootstrapping = false;
+let isInitialized = false;
 let lastVisibilityChange = 0;
 
 // =============================================================================
@@ -47,6 +46,13 @@ class SyncOrchestrator {
    * Call this on app startup
    */
   async initialize(options: { onSyncComplete?: () => void } = {}): Promise<void> {
+    // Prevent re-initialization if already initialized
+    if (isInitialized) {
+      console.log("[Sync] Already initialized, skipping");
+      this.onSyncComplete = options.onSyncComplete;
+      return;
+    }
+
     this.onSyncComplete = options.onSyncComplete;
 
     // Check if we have a token
@@ -75,6 +81,8 @@ class SyncOrchestrator {
 
     // Start background sync
     this.startBackgroundSync();
+
+    isInitialized = true;
   }
 
   /**
@@ -94,6 +102,7 @@ class SyncOrchestrator {
     }
 
     resetOctokit();
+    isInitialized = false;
   }
 
   /**
@@ -141,21 +150,14 @@ class SyncOrchestrator {
 
     // Fetch in parallel
     const results = await Promise.allSettled([
-      // User data
       fetchUser(),
-      // User issues (assigned/mentioned)
       fetchUserIssues({ filter: "all", state: "open" }),
-      // Review requests
       fetchReviewRequests(),
-      // Notifications
-      fetchNotifications({ all: false }),
-      // Organizations
       fetchUserOrgs(),
     ]);
 
     // Process results
-    const [userResult, issuesResult, reviewsResult, notificationsResult, orgsResult] =
-      results;
+    const [userResult, issuesResult, reviewsResult, orgsResult] = results;
 
     // User data - handled by auth store, but we can cache it
     if (userResult.status === "fulfilled" && userResult.value.modified) {
@@ -179,15 +181,6 @@ class SyncOrchestrator {
       if (modified && data) {
         entityCache.upsertPullRequests(data, { etag });
         console.log(`[Sync] Cached ${data.length} review requests`);
-      }
-    }
-
-    // Notifications
-    if (notificationsResult.status === "fulfilled") {
-      const { modified, data, etag } = notificationsResult.value;
-      if (modified && data) {
-        entityCache.upsertNotifications(data, { etag });
-        console.log(`[Sync] Cached ${data.length} notifications`);
       }
     }
 
@@ -277,18 +270,6 @@ class SyncOrchestrator {
         if (result.modified && result.data) {
           entityCache.upsertIssues(result.data, { etag: result.etag });
           entityCache.updateCursor("user", Date.now());
-        }
-      },
-    });
-
-    fetchQueue.addJob({
-      priority: FetchPriority.LOW,
-      entityType: "notifications",
-      execute: async () => {
-        const result = await fetchNotifications({ all: false });
-        if (result.modified && result.data) {
-          entityCache.upsertNotifications(result.data, { etag: result.etag });
-          entityCache.updateCursor("notifications", Date.now());
         }
       },
     });
@@ -406,25 +387,11 @@ export function destroySyncOrchestrator(): void {
 }
 
 export function useSyncEngine() {
-  const { isAuthenticated, token } = useAuthStore();
   const entityCache = useEntityCache();
   const rateLimitStore = useRateLimitStore();
 
-  // Initialize sync engine when authenticated
-  useEffect(() => {
-    if (!isAuthenticated || !token) {
-      destroySyncOrchestrator();
-      return;
-    }
-
-    const orchestrator = getSyncOrchestrator();
-    orchestrator.initialize();
-
-    return () => {
-      // Don't destroy on unmount - keep syncing
-      // destroySyncOrchestrator();
-    };
-  }, [isAuthenticated, token]);
+  // Note: Sync initialization is handled by SyncProvider
+  // This hook only provides access to sync state and actions
 
   // Manual refresh handler
   const refresh = useCallback(async () => {
@@ -465,13 +432,11 @@ export function useSyncEngine() {
     issues: entityCache.issues,
     pullRequests: entityCache.pullRequests,
     workflowRuns: entityCache.workflowRuns,
-    notifications: entityCache.notifications,
     orgs: entityCache.orgs,
 
     // Query helpers
     getOpenIssues: entityCache.getOpenIssues,
     getOpenPRs: entityCache.getOpenPRs,
-    getUnreadNotifications: entityCache.getUnreadNotifications,
   };
 }
 

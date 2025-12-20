@@ -106,22 +106,6 @@ export interface CachedWorkflowRun {
   updatedAt: string;
 }
 
-export interface CachedNotification {
-  id: string;
-  unread: boolean;
-  reason: string;
-  updatedAt: string;
-  subject: {
-    title: string;
-    url: string | null;
-    type: string;
-  };
-  repository: {
-    fullName: string;
-    htmlUrl: string;
-  };
-}
-
 export interface CachedOrg {
   id: number;
   login: string;
@@ -168,8 +152,6 @@ export interface SyncCursors {
   orgs: Record<string, number>;
   /** Per-repo cursors for issues/PRs */
   repos: Record<string, { issues?: number; prs?: number; workflows?: number }>;
-  /** Notifications cursor */
-  notifications?: number;
 }
 
 // =============================================================================

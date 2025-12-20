@@ -18,7 +18,6 @@ export {
   fetchUserRepos,
   fetchUserIssues,
   fetchReviewRequests,
-  fetchNotifications,
   fetchUserOrgs,
   fetchRepoWorkflowRuns,
   fetchUserCounts,
@@ -45,8 +44,6 @@ export {
   computeRepoState,
   usePinnedReposEnriched,
   useRecentRepos,
-  // Notification selectors
-  useNotificationsByReason,
   // Activity selectors
   useActivityFeed,
   // Dashboard selectors

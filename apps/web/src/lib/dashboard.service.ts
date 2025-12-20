@@ -126,7 +126,6 @@ export async function fetchDashboardData(): Promise<DashboardData> {
       issuesResponse,
       openIssuesCountResponse,
       openPrsCountResponse,
-      notificationsResponse,
     ] = await Promise.allSettled([
       octokit.rest.repos.listForAuthenticatedUser({
         sort: "updated",
@@ -149,10 +148,6 @@ export async function fetchDashboardData(): Promise<DashboardData> {
         q: `is:pr is:open involves:${user.login}`,
         per_page: 1, // We only need the total_count
       }),
-      octokit.rest.activity.listNotificationsForAuthenticatedUser({
-        all: false,
-        per_page: 10,
-      }),
     ]);
 
     const repos =
@@ -167,10 +162,6 @@ export async function fetchDashboardData(): Promise<DashboardData> {
       openPrsCountResponse.status === "fulfilled"
         ? openPrsCountResponse.value.data.total_count || 0
         : 0;
-    const notifications =
-      notificationsResponse.status === "fulfilled"
-        ? notificationsResponse.value.data
-        : [];
 
     // Transform issues
     const transformedIssues: Issue[] = issues
@@ -193,13 +184,13 @@ export async function fetchDashboardData(): Promise<DashboardData> {
         };
       });
 
-    // Transform recent activity from notifications
-    const recentActivity: RecentActivity[] = notifications.slice(0, 10).map(
-      (notification: any) => ({
-        id: notification.id,
-        title: notification.subject.title || "Notification",
-        description: `${notification.repository?.full_name || "Unknown"} - ${notification.subject.type}`,
-        timeAgo: formatTimeAgo(new Date(notification.updated_at)),
+    // Recent activity from issues (since notifications are not available)
+    const recentActivity: RecentActivity[] = transformedIssues.slice(0, 10).map(
+      (issue) => ({
+        id: issue.id,
+        title: issue.title,
+        description: `${issue.repository} #${issue.number}`,
+        timeAgo: issue.timeAgo,
       }),
     );
 
@@ -250,16 +241,8 @@ export async function fetchDashboardData(): Promise<DashboardData> {
       },
     ];
 
-    // Notification
-    const notification: Notification | null =
-      notifications.length > 0
-        ? {
-            id: "notifications",
-            count: notifications.length,
-            message: `You have ${notifications.length} unread notification${notifications.length !== 1 ? "s" : ""}`,
-            source: "GitHub",
-          }
-        : null;
+    // Notifications are not available with fine-grained tokens
+    const notification: Notification | null = null;
 
     return {
       metrics,
