@@ -16,6 +16,8 @@ import {
 } from "@/lib/dashboard.service";
 import { cn } from "@/lib/utils";
 import { usePinnedRepos } from "@/stores/pinned-repos";
+import { useAuthStore } from "@/stores/auth";
+import { getContextualGreeting } from "luh-calm-greet";
 
 /**
  * Metric Card Component
@@ -216,6 +218,21 @@ export function Overview() {
   const [data, setData] = useState<DashboardData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const { pinnedRepos } = usePinnedRepos();
+  const { user } = useAuthStore();
+  const [greeting, setGreeting] = useState("");
+
+  useEffect(() => {
+    if (user) {
+      setGreeting(
+        getContextualGreeting({
+          name: user.name || user.login,
+          // lastLoginDate: new Date(user.updated_at), // Assuming user.updated_at can be used as last login
+          // accountCreatedDate: new Date(user.created_at), // Assuming user.created_at is available
+          // birthday: new Date("1990-01-01"), // Example birthday
+        }),
+      );
+    }
+  }, [user]);
 
   useEffect(() => {
     const loadData = async () => {
@@ -270,7 +287,7 @@ export function Overview() {
       <div className="mt-16 flex w-full max-w-4xl flex-col gap-4">
         {/* Header */}
         <div className="flex flex-col gap-2">
-          <h1 className="font-semibold text-2xl tracking-tight">Overview</h1>
+          <h1 className="font-semibold text-2xl tracking-tight">{greeting || "Overview"}</h1>
         </div>
 
         {/* Notification Banner */}
@@ -309,7 +326,7 @@ export function Overview() {
         {/* Two Column Layout for Issues and Pinned Repos */}
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
           {/* Issues Section */}
-          <div className="flex flex-col gap-4">
+          <div className="flex flex-col gap-2">
             <h2 className="font-semibold text-lg">
               Issues{" "}
               {data.issues.length > 0 && (
@@ -332,7 +349,7 @@ export function Overview() {
           </div>
 
           {/* Pinned Repositories Section */}
-          <div className="flex flex-col gap-4">
+          <div className="flex flex-col gap-2">
             <h2 className="font-semibold text-lg">
               Pinned Repositories{" "}
               {data.pinnedRepositories.length > 0 && (
@@ -358,7 +375,7 @@ export function Overview() {
         </div>
 
         {/* Recent Activity Section */}
-        <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-2">
           <h2 className="font-semibold text-lg">Recent Activity</h2>
           {data.recentActivity.length > 0 ? (
             <>
