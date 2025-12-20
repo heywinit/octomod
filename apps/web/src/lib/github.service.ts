@@ -1,5 +1,6 @@
 import { STORAGE_KEYS } from "./constants";
 import { createOctokitClient } from "./octokit";
+import type { GitHubUser } from "@/stores/auth";
 
 export interface Repository {
   id: number;
@@ -11,6 +12,47 @@ export interface Repository {
   stargazers_count: number;
   forks_count: number;
   language: string | null;
+}
+
+/**
+ * Fetches the authenticated user's information from GitHub
+ * @param token - GitHub access token
+ * @returns User information
+ */
+export async function fetchUser(token: string): Promise<GitHubUser> {
+  const octokit = createOctokitClient(token);
+
+  try {
+    const { data: user } = await octokit.rest.users.getAuthenticated();
+
+    return {
+      id: user.id,
+      login: user.login,
+      name: user.name || null,
+      avatar_url: user.avatar_url,
+      bio: user.bio || null,
+      email: user.email || null,
+      public_repos: user.public_repos,
+      followers: user.followers,
+      following: user.following,
+      html_url: user.html_url,
+    };
+  } catch (error: unknown) {
+    console.error("Error fetching user:", error);
+
+    if (error && typeof error === "object" && "status" in error) {
+      const status = (error as { status: number }).status;
+      if (status === 401) {
+        // Token is invalid, clear it
+        if (typeof window !== "undefined") {
+          localStorage.removeItem(STORAGE_KEYS.GITHUB_TOKEN);
+        }
+        throw new Error("Session expired. Please login again.");
+      }
+    }
+
+    throw new Error("Failed to fetch user information");
+  }
 }
 
 /**

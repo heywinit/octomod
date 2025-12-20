@@ -6,13 +6,15 @@ import { Overview } from "@/components/overview";
 import { COOKIE_NAMES } from "@/lib/constants";
 import { deleteCookie, getCookie } from "@/lib/utils";
 import { useAuthStore } from "@/stores/auth";
+import { fetchUser } from "@/lib/github.service";
 
 export const Route = createFileRoute("/")({
   component: HomePage,
 });
 
 function HomePage() {
-  const { isAuthenticated, checkAuth, setToken } = useAuthStore();
+  const { isAuthenticated, checkAuth, setToken, setUser, token, user } =
+    useAuthStore();
   const [isHydrated, setIsHydrated] = useState(false);
 
   useEffect(() => {
@@ -45,6 +47,14 @@ function HomePage() {
         if (token) {
           setToken(token);
           await deleteCookie(COOKIE_NAMES.GITHUB_TOKEN_TEMP);
+
+          // Fetch user info after setting token
+          try {
+            const userData = await fetchUser(token);
+            setUser(userData);
+          } catch (error) {
+            console.error("Failed to fetch user info:", error);
+          }
         } else {
           checkAuth();
         }
@@ -56,7 +66,23 @@ function HomePage() {
     };
 
     handleAuthCallback();
-  }, [checkAuth, setToken]);
+  }, [checkAuth, setToken, setUser]);
+
+  // Fetch user info if we have a token but no user data
+  useEffect(() => {
+    const loadUserIfNeeded = async () => {
+      if (token && !user && isHydrated) {
+        try {
+          const userData = await fetchUser(token);
+          setUser(userData);
+        } catch (error) {
+          console.error("Failed to fetch user info:", error);
+        }
+      }
+    };
+
+    loadUserIfNeeded();
+  }, [token, user, isHydrated, setUser]);
 
   // Show loading state while hydrating
   if (!isHydrated) {

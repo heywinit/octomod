@@ -1,8 +1,10 @@
 /**
  * Dashboard Service
  * Provides data structures and types for the dashboard overview
- * This service will later be connected to the GitHub API
  */
+
+import { getOctokitFromStorage } from "./octokit";
+import { STORAGE_KEYS } from "./constants";
 
 export interface Metric {
   id: string;
@@ -92,24 +94,122 @@ export interface DashboardData {
 }
 
 /**
- * Fetches dashboard data
- * Currently returns mock data structure - will be replaced with GitHub API calls
+ * Fetches dashboard data from GitHub API
  * @returns Dashboard data including metrics, notifications, pending items, and recent activity
  */
 export async function fetchDashboardData(): Promise<DashboardData> {
-  // TODO: Replace with actual GitHub API calls
-  // This structure will be populated with real data from:
-  // - User stats (repos, stars, contributions)
-  // - Notifications from GitHub
-  // - Pending PRs and issues requiring attention
-  // - Recent activity feed
+  // Get token from localStorage
+  const token =
+    typeof window !== "undefined"
+      ? localStorage.getItem(STORAGE_KEYS.GITHUB_TOKEN)
+      : null;
 
-  return {
-    metrics: [
+  if (!token) {
+    throw new Error("No authentication token found");
+  }
+
+  const octokit = getOctokitFromStorage();
+  if (!octokit) {
+    throw new Error("Failed to initialize Octokit client");
+  }
+
+  try {
+    // Fetch data in parallel
+    const [
+      userResponse,
+      reposResponse,
+      issuesResponse,
+      pullRequestsResponse,
+      notificationsResponse,
+    ] = await Promise.allSettled([
+      octokit.rest.users.getAuthenticated(),
+      octokit.rest.repos.listForAuthenticatedUser({
+        sort: "updated",
+        direction: "desc",
+        per_page: 100,
+        type: "all",
+      }),
+      octokit.rest.issues.listForAuthenticatedUser({
+        filter: "all",
+        state: "open",
+        sort: "updated",
+        direction: "desc",
+        per_page: 30,
+      }),
+      octokit.rest.search.issuesAndPullRequests({
+        q: "is:pr is:open author:@me",
+        sort: "updated",
+        order: "desc",
+        per_page: 30,
+      }),
+      octokit.rest.activity.listNotificationsForAuthenticatedUser({
+        all: false,
+        per_page: 10,
+      }),
+    ]);
+
+    const user =
+      userResponse.status === "fulfilled" ? userResponse.value.data : null;
+    const repos =
+      reposResponse.status === "fulfilled" ? reposResponse.value.data : [];
+    const issues =
+      issuesResponse.status === "fulfilled" ? issuesResponse.value.data : [];
+    const pullRequests =
+      pullRequestsResponse.status === "fulfilled"
+        ? pullRequestsResponse.value.data.items || []
+        : [];
+    const notifications =
+      notificationsResponse.status === "fulfilled"
+        ? notificationsResponse.value.data
+        : [];
+
+    // Transform issues
+    const transformedIssues: Issue[] = issues
+      .filter((issue: any) => !issue.pull_request) // Exclude PRs
+      .slice(0, 20)
+      .map((issue: any) => {
+        const repoName = issue.repository?.full_name || issue.repository_url.split("/").slice(-2).join("/");
+        return {
+          id: issue.id.toString(),
+          number: issue.number,
+          title: issue.title,
+          repository: repoName,
+          state: issue.state as "open" | "closed",
+          timeAgo: formatTimeAgo(new Date(issue.updated_at)),
+          url: issue.html_url,
+          labels: issue.labels
+            .filter((label: any) => typeof label === "object" && "name" in label)
+            .map((label: any) => (label as { name: string }).name),
+          waitingOnYou: issue.assignee?.login === user?.login,
+        };
+      });
+
+    // Transform recent activity from notifications
+    const recentActivity: RecentActivity[] = notifications.slice(0, 10).map(
+      (notification: any) => ({
+        id: notification.id,
+        title: notification.subject.title || "Notification",
+        description: `${notification.repository?.full_name || "Unknown"} - ${notification.subject.type}`,
+        timeAgo: formatTimeAgo(new Date(notification.updated_at)),
+      }),
+    );
+
+    // Calculate metrics
+    const activeRepos = repos.filter(
+      (repo: any) =>
+        new Date(repo.updated_at).getTime() >
+        Date.now() - 30 * 24 * 60 * 60 * 1000,
+    ).length;
+
+    const openPrsCount = pullRequests.length;
+    const openIssuesCount = issues.filter((i: any) => !i.pull_request).length;
+
+    // Format metrics
+    const metrics: Metric[] = [
       {
         id: "active-repos",
         label: "Active Repositories",
-        value: "0",
+        value: formatMetricValue(activeRepos),
         change: {
           value: 0,
           isPositive: true,
@@ -118,7 +218,7 @@ export async function fetchDashboardData(): Promise<DashboardData> {
       {
         id: "open-prs",
         label: "Open Pull Requests",
-        value: "0",
+        value: formatMetricValue(openPrsCount),
         change: {
           value: 0,
           isPositive: false,
@@ -127,7 +227,7 @@ export async function fetchDashboardData(): Promise<DashboardData> {
       {
         id: "open-issues",
         label: "Open Issues",
-        value: "0",
+        value: formatMetricValue(openIssuesCount),
         change: {
           value: 0,
           isPositive: false,
@@ -136,21 +236,74 @@ export async function fetchDashboardData(): Promise<DashboardData> {
       {
         id: "contributions",
         label: "Contributions",
-        value: "0",
+        value: user ? formatMetricValue(user.public_repos) : "0",
         change: {
           value: 0,
           isPositive: true,
         },
       },
-    ],
-    notification: null,
-    pendingItems: [],
-    recentActivity: [],
-    issues: [],
-    pinnedRepositories: [],
-    ciAlerts: [],
-    healthSnapshot: undefined,
-  };
+    ];
+
+    // Notification
+    const notification: Notification | null =
+      notifications.length > 0
+        ? {
+            id: "notifications",
+            count: notifications.length,
+            message: `You have ${notifications.length} unread notification${notifications.length !== 1 ? "s" : ""}`,
+            source: "GitHub",
+          }
+        : null;
+
+    return {
+      metrics,
+      notification,
+      pendingItems: [],
+      recentActivity,
+      issues: transformedIssues,
+      pinnedRepositories: [], // Will be merged from store in Overview component
+      ciAlerts: [], // TODO: Implement CI status checking
+      healthSnapshot: undefined, // TODO: Implement health snapshot
+    };
+  } catch (error) {
+    console.error("Error fetching dashboard data:", error);
+    // Return empty data structure on error
+    return {
+      metrics: [
+        {
+          id: "active-repos",
+          label: "Active Repositories",
+          value: "0",
+          change: { value: 0, isPositive: true },
+        },
+        {
+          id: "open-prs",
+          label: "Open Pull Requests",
+          value: "0",
+          change: { value: 0, isPositive: false },
+        },
+        {
+          id: "open-issues",
+          label: "Open Issues",
+          value: "0",
+          change: { value: 0, isPositive: false },
+        },
+        {
+          id: "contributions",
+          label: "Contributions",
+          value: "0",
+          change: { value: 0, isPositive: true },
+        },
+      ],
+      notification: null,
+      pendingItems: [],
+      recentActivity: [],
+      issues: [],
+      pinnedRepositories: [],
+      ciAlerts: [],
+      healthSnapshot: undefined,
+    };
+  }
 }
 
 /**
