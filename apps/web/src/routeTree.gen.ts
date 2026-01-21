@@ -17,6 +17,7 @@ import { Route as InboxRouteImport } from './routes/inbox'
 import { Route as ActivityRouteImport } from './routes/activity'
 import { Route as UsernameRouteImport } from './routes/$username'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as OwnerRepoRouteImport } from './routes/$owner.$repo'
 import { Route as ApiAuthGithubLoginRouteImport } from './routes/api/auth/github/login'
 import { Route as ApiAuthGithubCallbackRouteImport } from './routes/api/auth/github/callback'
 
@@ -60,6 +61,11 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const OwnerRepoRoute = OwnerRepoRouteImport.update({
+  id: '/$owner/$repo',
+  path: '/$owner/$repo',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiAuthGithubLoginRoute = ApiAuthGithubLoginRouteImport.update({
   id: '/api/auth/github/login',
   path: '/api/auth/github/login',
@@ -80,6 +86,7 @@ export interface FileRoutesByFullPath {
   '/repos': typeof ReposRoute
   '/search': typeof SearchRoute
   '/settings': typeof SettingsRoute
+  '/$owner/$repo': typeof OwnerRepoRoute
   '/api/auth/github/callback': typeof ApiAuthGithubCallbackRoute
   '/api/auth/github/login': typeof ApiAuthGithubLoginRoute
 }
@@ -92,6 +99,7 @@ export interface FileRoutesByTo {
   '/repos': typeof ReposRoute
   '/search': typeof SearchRoute
   '/settings': typeof SettingsRoute
+  '/$owner/$repo': typeof OwnerRepoRoute
   '/api/auth/github/callback': typeof ApiAuthGithubCallbackRoute
   '/api/auth/github/login': typeof ApiAuthGithubLoginRoute
 }
@@ -105,6 +113,7 @@ export interface FileRoutesById {
   '/repos': typeof ReposRoute
   '/search': typeof SearchRoute
   '/settings': typeof SettingsRoute
+  '/$owner/$repo': typeof OwnerRepoRoute
   '/api/auth/github/callback': typeof ApiAuthGithubCallbackRoute
   '/api/auth/github/login': typeof ApiAuthGithubLoginRoute
 }
@@ -119,6 +128,7 @@ export interface FileRouteTypes {
     | '/repos'
     | '/search'
     | '/settings'
+    | '/$owner/$repo'
     | '/api/auth/github/callback'
     | '/api/auth/github/login'
   fileRoutesByTo: FileRoutesByTo
@@ -131,6 +141,7 @@ export interface FileRouteTypes {
     | '/repos'
     | '/search'
     | '/settings'
+    | '/$owner/$repo'
     | '/api/auth/github/callback'
     | '/api/auth/github/login'
   id:
@@ -143,6 +154,7 @@ export interface FileRouteTypes {
     | '/repos'
     | '/search'
     | '/settings'
+    | '/$owner/$repo'
     | '/api/auth/github/callback'
     | '/api/auth/github/login'
   fileRoutesById: FileRoutesById
@@ -156,6 +168,7 @@ export interface RootRouteChildren {
   ReposRoute: typeof ReposRoute
   SearchRoute: typeof SearchRoute
   SettingsRoute: typeof SettingsRoute
+  OwnerRepoRoute: typeof OwnerRepoRoute
   ApiAuthGithubCallbackRoute: typeof ApiAuthGithubCallbackRoute
   ApiAuthGithubLoginRoute: typeof ApiAuthGithubLoginRoute
 }
@@ -218,6 +231,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/$owner/$repo': {
+      id: '/$owner/$repo'
+      path: '/$owner/$repo'
+      fullPath: '/$owner/$repo'
+      preLoaderRoute: typeof OwnerRepoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/auth/github/login': {
       id: '/api/auth/github/login'
       path: '/api/auth/github/login'
@@ -244,6 +264,7 @@ const rootRouteChildren: RootRouteChildren = {
   ReposRoute: ReposRoute,
   SearchRoute: SearchRoute,
   SettingsRoute: SettingsRoute,
+  OwnerRepoRoute: OwnerRepoRoute,
   ApiAuthGithubCallbackRoute: ApiAuthGithubCallbackRoute,
   ApiAuthGithubLoginRoute: ApiAuthGithubLoginRoute,
 }
