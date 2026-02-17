@@ -8,9 +8,10 @@ import {
   Command,
   FileCode,
   GitPullRequest,
+  Loader2,
   Search,
 } from "lucide-react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Input } from "@/components/ui/input";
 import {
   Popover,
@@ -22,6 +23,7 @@ import {
   parseQuery,
   type SearchResult,
   type SearchSection,
+  searchGitHub,
   useLocalSearch,
   useRecentSearches,
 } from "@/lib/search";
@@ -122,14 +124,57 @@ export function SearchPopover() {
   const [searchQuery, setSearchQuery] = useState("");
   const [isOpen, setIsOpen] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(0);
+  const [githubResults, setGithubResults] = useState<SearchResult[]>([]);
+  const [isLoadingGithub, setIsLoadingGithub] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const selectedItemRef = useRef<HTMLButtonElement>(null);
 
-  const parsedQuery = parseQuery(searchQuery);
+  const parsedQuery = useMemo(() => parseQuery(searchQuery), [searchQuery]);
   const sections = useLocalSearch(parsedQuery, { limit: 8 });
-  const allResults = getAllResults(sections);
+  const localResults = useMemo(() => getAllResults(sections), [sections]);
+  const allResults = useMemo(
+    () => [...localResults, ...githubResults],
+    [localResults, githubResults],
+  );
   const { searches: recentSearches, addSearch } = useRecentSearches();
+
+  // Fetch GitHub results when query changes
+  useEffect(() => {
+    if (!searchQuery.trim() || searchQuery.trim().length < 2) {
+      setGithubResults([]);
+      setIsLoadingGithub(false);
+      return;
+    }
+
+    let cancelled = false;
+
+    const fetchGithub = async () => {
+      setIsLoadingGithub(true);
+      try {
+        const [repos, issues, prs] = await Promise.all([
+          searchGitHub(parsedQuery, "repositories"),
+          searchGitHub(parsedQuery, "issues"),
+          searchGitHub(parsedQuery, "pr"),
+        ]);
+
+        if (cancelled) return;
+
+        setGithubResults([...repos, ...issues, ...prs].slice(0, 10));
+      } catch (e) {
+        console.error("GitHub search error:", e);
+        if (!cancelled) setGithubResults([]);
+      } finally {
+        if (!cancelled) setIsLoadingGithub(false);
+      }
+    };
+
+    const debounce = setTimeout(fetchGithub, 400);
+    return () => {
+      cancelled = true;
+      clearTimeout(debounce);
+    };
+  }, [searchQuery, parsedQuery]);
 
   const isShowingRecent =
     searchQuery.trim() === "" && recentSearches.length > 0;
@@ -277,7 +322,7 @@ export function SearchPopover() {
                 </button>
               ))}
             </div>
-          ) : totalResults === 0 ? (
+          ) : totalResults === 0 && !isLoadingGithub ? (
             <div className="p-8 text-center text-muted-foreground">
               <p className="text-sm">No results found for "{searchQuery}"</p>
               <p className="mt-1 text-xs">
@@ -301,6 +346,40 @@ export function SearchPopover() {
                   />
                 );
               })}
+
+              {/* GitHub Results */}
+              {githubResults.length > 0 && (
+                <div className="flex flex-col">
+                  <div className="flex items-center gap-2 px-3 py-1.5 font-medium text-blue-500 text-xs">
+                    <span>From GitHub</span>
+                    <span className="text-[10px]">
+                      ({githubResults.length})
+                    </span>
+                  </div>
+                  <div className="flex flex-col px-1">
+                    {githubResults.map((result) => {
+                      const startIndex = currentIndex;
+                      currentIndex++;
+                      return (
+                        <SearchResultItem
+                          key={result.id}
+                          result={result}
+                          isSelected={selectedIndex === startIndex}
+                          onClick={() => handleSelect(result)}
+                          itemRef={selectedItemRef}
+                        />
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {isLoadingGithub && (
+                <div className="flex items-center gap-2 px-3 py-2 text-muted-foreground text-sm">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <span>Searching GitHub...</span>
+                </div>
+              )}
             </div>
           )}
           <div className="flex items-center justify-between border-t bg-muted/30 px-3 py-2 text-muted-foreground text-xs">
