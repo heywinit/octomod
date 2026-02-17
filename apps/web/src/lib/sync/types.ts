@@ -285,3 +285,76 @@ export const DEFAULT_SYNC_CONFIG: SyncEngineConfig = {
   retryBaseDelay: 1000,
 };
 
+// =============================================================================
+// Search Result Types
+// =============================================================================
+
+export interface SearchResultIssue {
+  id: number;
+  nodeId: string;
+  number: number;
+  title: string;
+  state: "open" | "closed";
+  htmlUrl: string;
+  repositoryFullName: string;
+  createdAt: string;
+  updatedAt: string;
+  closedAt: string | null;
+  labels: Array<{ name: string; color: string }>;
+  assignees: Array<{ login: string; avatarUrl: string }>;
+  user: { login: string; avatarUrl: string };
+  comments: number;
+  isPullRequest: boolean;
+}
+
+export interface SearchResultPR {
+  id: number;
+  nodeId: string;
+  number: number;
+  title: string;
+  state: "open" | "closed" | "merged";
+  htmlUrl: string;
+  repositoryFullName: string;
+  createdAt: string;
+  updatedAt: string;
+  closedAt: string | null;
+  mergedAt: string | null;
+  draft: boolean;
+  labels: Array<{ name: string; color: string }>;
+  user: { login: string; avatarUrl: string };
+  requestedReviewers: Array<{ login: string; avatarUrl: string }>;
+  head: { ref: string; sha: string };
+  base: { ref: string };
+}
+
+export interface SearchResultRepo {
+  id: number;
+  nodeId: string;
+  name: string;
+  fullName: string;
+  owner: {
+    login: string;
+    avatarUrl: string;
+  };
+  description: string | null;
+  htmlUrl: string;
+  updatedAt: string;
+  pushedAt: string;
+  stargazersCount: number;
+  forksCount: number;
+  language: string | null;
+  openIssuesCount: number;
+  visibility: "public" | "private" | "internal";
+  defaultBranch: string;
+  isPrivate: boolean;
+}
+
+export interface CachedSearchResult {
+  id: string;
+  query: string;
+  type: "issues" | "prs" | "repos";
+  items: SearchResultIssue[] | SearchResultPR[] | SearchResultRepo[];
+  totalCount: number;
+  fetchedAt: number;
+  etag?: string;
+}

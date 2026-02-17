@@ -18,6 +18,8 @@
     "@vercel/analytics": "^1.6.1",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "dexie": "^4.3.0",
+    "dexie-react-hooks": "^4.2.0",
     "dotenv": "catalog:",
     "lucide-react": "^0.525.0",
     "luh-calm-greet": "^0.1.1",

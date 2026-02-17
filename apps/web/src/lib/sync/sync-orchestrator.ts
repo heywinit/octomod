@@ -3,22 +3,27 @@
  * Manages the sync lifecycle: bootstrap, background sync, and visibility-driven fetching
  */
 
+import { useCallback } from "react";
 import { useEntityCache } from "./entity-store";
-import { useRateLimitStore, useFetchQueue } from "./rate-limiter";
 import {
-  fetchUser,
-  fetchUserRepos,
-  fetchUserIssues,
-  fetchReviewRequests,
-  fetchUserOrgs,
-  fetchRepoWorkflowRuns,
+  fetchOrgRepos,
   fetchRateLimit,
+  fetchRepoWorkflowRuns,
+  fetchUser,
+  fetchUserCollaboratorRepos,
+  fetchUserMemberRepos,
+  fetchUserOrgs,
+  fetchUserOwnedRepos,
   getOctokit,
   resetOctokit,
+  searchAssignedPRs,
+  searchAuthoredPRs,
+  searchReviewRequestedPRs,
+  searchUserIssues,
 } from "./github-api";
-import { FetchPriority, DEFAULT_SYNC_CONFIG } from "./types";
-import type { SyncEngineConfig } from "./types";
-import { useCallback } from "react";
+import { useFetchQueue, useRateLimitStore } from "./rate-limiter";
+import type { CachedIssue, CachedPullRequest, SyncEngineConfig } from "./types";
+import { DEFAULT_SYNC_CONFIG, FetchPriority } from "./types";
 
 // =============================================================================
 // Sync State
@@ -45,8 +50,9 @@ class SyncOrchestrator {
    * Initialize the sync engine
    * Call this on app startup
    */
-  async initialize(options: { onSyncComplete?: () => void } = {}): Promise<void> {
-    // Prevent re-initialization if already initialized
+  async initialize(
+    options: { onSyncComplete?: () => void } = {},
+  ): Promise<void> {
     if (isInitialized) {
       console.log("[Sync] Already initialized, skipping");
       this.onSyncComplete = options.onSyncComplete;
@@ -55,23 +61,26 @@ class SyncOrchestrator {
 
     this.onSyncComplete = options.onSyncComplete;
 
-    // Check if we have a token
     const octokit = getOctokit();
     if (!octokit) {
       console.log("[Sync] No auth token, skipping initialization");
       return;
     }
 
-    // Set up visibility change listener
     if (typeof document !== "undefined") {
-      document.addEventListener("visibilitychange", this.handleVisibilityChange);
+      document.addEventListener(
+        "visibilitychange",
+        this.handleVisibilityChange,
+      );
     }
 
-    // Set up network change listener
     if (typeof window !== "undefined") {
       window.addEventListener("online", this.handleOnline);
       window.addEventListener("offline", this.handleOffline);
     }
+
+    // Load existing data from IndexedDB first
+    await useEntityCache.getState().loadFromDatabase();
 
     // Fetch rate limit first
     await fetchRateLimit();
@@ -93,7 +102,10 @@ class SyncOrchestrator {
     useFetchQueue.getState().clearQueue();
 
     if (typeof document !== "undefined") {
-      document.removeEventListener("visibilitychange", this.handleVisibilityChange);
+      document.removeEventListener(
+        "visibilitychange",
+        this.handleVisibilityChange,
+      );
     }
 
     if (typeof window !== "undefined") {
@@ -119,13 +131,10 @@ class SyncOrchestrator {
     console.log("[Sync] Starting bootstrap sync");
 
     try {
-      // Step 1: Render from cache immediately (already done by Zustand persist)
-      // UI should already be showing cached data
-
-      // Step 2: Priority fetch (blocking) - Critical data for home page
+      // Priority fetch - critical data
       await this.priorityFetch();
 
-      // Step 3: Background fetch (deferred) - Less critical data
+      // Deferred fetch - repos from all sources
       this.deferredFetch();
 
       entityCache.setSyncStatus("idle");
@@ -143,80 +152,212 @@ class SyncOrchestrator {
 
   /**
    * Priority Fetch
-   * Fetches critical data needed for the home page
+   * Fetches critical data: user, orgs, issues, PRs
    */
   private async priorityFetch(): Promise<void> {
     const entityCache = useEntityCache.getState();
 
-    // Fetch in parallel
-    const results = await Promise.allSettled([
-      fetchUser(),
-      fetchUserIssues({ filter: "all", state: "open" }),
-      fetchReviewRequests(),
-      fetchUserOrgs(),
-    ]);
-
-    // Process results
-    const [userResult, issuesResult, reviewsResult, orgsResult] = results;
-
-    // User data - handled by auth store, but we can cache it
-    if (userResult.status === "fulfilled" && userResult.value.modified) {
-      console.log("[Sync] User data updated");
+    // Fetch user (for login)
+    const userResult = await fetchUser();
+    if (userResult.modified && userResult.data) {
+      console.log("[Sync] User data updated:", userResult.data.login);
     }
 
-    // Issues
-    if (issuesResult.status === "fulfilled") {
-      const { modified, data, etag } = issuesResult.value;
-      if (modified && data) {
-        entityCache.upsertIssues(data, { etag });
-        console.log(`[Sync] Cached ${data.length} issues`);
-      } else {
-        console.log("[Sync] Issues not modified (304)");
-      }
+    // Fetch orgs first (needed for org repos)
+    const orgsResult = await fetchUserOrgs();
+    if (orgsResult.modified && orgsResult.data) {
+      entityCache.upsertOrgs(orgsResult.data, { etag: orgsResult.etag });
+      console.log(`[Sync] Cached ${orgsResult.data.length} orgs`);
     }
 
-    // Review requests (PRs)
-    if (reviewsResult.status === "fulfilled") {
-      const { modified, data, etag } = reviewsResult.value;
-      if (modified && data) {
-        entityCache.upsertPullRequests(data, { etag });
-        console.log(`[Sync] Cached ${data.length} review requests`);
-      }
+    // Fetch issues involving the user (author, assignee, mentioned)
+    const issuesResult = await searchUserIssues({
+      state: "open",
+      perPage: 100,
+    });
+    if (issuesResult.modified && issuesResult.data) {
+      const issues = issuesResult.data.items.map(
+        (item): CachedIssue => ({
+          id: item.id,
+          nodeId: item.nodeId,
+          number: item.number,
+          title: item.title,
+          state: item.state,
+          htmlUrl: item.htmlUrl,
+          repositoryUrl: `https://api.github.com/repos/${item.repositoryFullName}`,
+          repositoryFullName: item.repositoryFullName,
+          createdAt: item.createdAt,
+          updatedAt: item.updatedAt,
+          closedAt: item.closedAt,
+          labels: item.labels,
+          assignees: item.assignees,
+          user: item.user,
+          comments: item.comments,
+          isPullRequest: item.isPullRequest,
+        }),
+      );
+      entityCache.upsertIssues(issues, { etag: issuesResult.etag });
+      console.log(`[Sync] Cached ${issues.length} issues`);
     }
 
-    // Organizations
-    if (orgsResult.status === "fulfilled") {
-      const { modified, data, etag } = orgsResult.value;
-      if (modified && data) {
-        entityCache.upsertOrgs(data, { etag });
-        console.log(`[Sync] Cached ${data.length} orgs`);
-      }
+    // Fetch PRs where user is requested for review
+    const reviewRequestedResult = await searchReviewRequestedPRs({
+      state: "open",
+      perPage: 100,
+    });
+    if (reviewRequestedResult.modified && reviewRequestedResult.data) {
+      const prs = reviewRequestedResult.data.items.map(
+        (item): CachedPullRequest => ({
+          id: item.id,
+          nodeId: item.nodeId,
+          number: item.number,
+          title: item.title,
+          state: item.state,
+          htmlUrl: item.htmlUrl,
+          repositoryFullName: item.repositoryFullName,
+          createdAt: item.createdAt,
+          updatedAt: item.updatedAt,
+          closedAt: item.closedAt,
+          mergedAt: item.mergedAt,
+          draft: item.draft,
+          labels: item.labels,
+          user: item.user,
+          requestedReviewers: item.requestedReviewers,
+          head: item.head,
+          base: item.base,
+        }),
+      );
+      entityCache.upsertPullRequests(prs, { etag: reviewRequestedResult.etag });
+      console.log(`[Sync] Cached ${prs.length} PRs (review requested)`);
+    }
+
+    // Fetch PRs authored by user
+    const authoredResult = await searchAuthoredPRs({
+      state: "open",
+      perPage: 100,
+    });
+    if (authoredResult.modified && authoredResult.data) {
+      const prs = authoredResult.data.items.map(
+        (item): CachedPullRequest => ({
+          id: item.id,
+          nodeId: item.nodeId,
+          number: item.number,
+          title: item.title,
+          state: item.state,
+          htmlUrl: item.htmlUrl,
+          repositoryFullName: item.repositoryFullName,
+          createdAt: item.createdAt,
+          updatedAt: item.updatedAt,
+          closedAt: item.closedAt,
+          mergedAt: item.mergedAt,
+          draft: item.draft,
+          labels: item.labels,
+          user: item.user,
+          requestedReviewers: item.requestedReviewers,
+          head: item.head,
+          base: item.base,
+        }),
+      );
+      entityCache.upsertPullRequests(prs, { etag: authoredResult.etag });
+      console.log(`[Sync] Cached ${prs.length} PRs (authored)`);
+    }
+
+    // Fetch PRs assigned to user
+    const assignedResult = await searchAssignedPRs({
+      state: "open",
+      perPage: 100,
+    });
+    if (assignedResult.modified && assignedResult.data) {
+      const prs = assignedResult.data.items.map(
+        (item): CachedPullRequest => ({
+          id: item.id,
+          nodeId: item.nodeId,
+          number: item.number,
+          title: item.title,
+          state: item.state,
+          htmlUrl: item.htmlUrl,
+          repositoryFullName: item.repositoryFullName,
+          createdAt: item.createdAt,
+          updatedAt: item.updatedAt,
+          closedAt: item.closedAt,
+          mergedAt: item.mergedAt,
+          draft: item.draft,
+          labels: item.labels,
+          user: item.user,
+          requestedReviewers: item.requestedReviewers,
+          head: item.head,
+          base: item.base,
+        }),
+      );
+      entityCache.upsertPullRequests(prs, { etag: assignedResult.etag });
+      console.log(`[Sync] Cached ${prs.length} PRs (assigned)`);
     }
   }
 
   /**
    * Deferred Fetch
-   * Fetches less critical data in the background
+   * Fetches repositories from all sources
    */
   private deferredFetch(): void {
     const fetchQueue = useFetchQueue.getState();
     const entityCache = useEntityCache.getState();
 
-    // Fetch repos (normal priority)
+    // Fetch repos owned by user
     fetchQueue.addJob({
       priority: FetchPriority.NORMAL,
       entityType: "repos",
       execute: async () => {
-        const result = await fetchUserRepos({ perPage: 100, sort: "updated" });
+        const result = await fetchUserOwnedRepos({ perPage: 100 });
         if (result.modified && result.data) {
           entityCache.upsertRepos(result.data, { etag: result.etag });
-          console.log(`[Sync] Cached ${result.data.length} repos`);
+          console.log(`[Sync] Cached ${result.data.length} owned repos`);
         }
       },
     });
 
-    // Fetch workflow runs for pinned repos (if any)
-    // This would be triggered by the pinned repos store
+    // Fetch repos where user is collaborator (private repos invited to)
+    fetchQueue.addJob({
+      priority: FetchPriority.NORMAL,
+      entityType: "repos",
+      execute: async () => {
+        const result = await fetchUserCollaboratorRepos({ perPage: 100 });
+        if (result.modified && result.data) {
+          entityCache.upsertRepos(result.data, { etag: result.etag });
+          console.log(`[Sync] Cached ${result.data.length} collaborator repos`);
+        }
+      },
+    });
+
+    // Fetch repos where user is member (org repos)
+    fetchQueue.addJob({
+      priority: FetchPriority.NORMAL,
+      entityType: "repos",
+      execute: async () => {
+        const result = await fetchUserMemberRepos({ perPage: 100 });
+        if (result.modified && result.data) {
+          entityCache.upsertRepos(result.data, { etag: result.etag });
+          console.log(`[Sync] Cached ${result.data.length} member repos`);
+        }
+      },
+    });
+
+    // Fetch repos from each org
+    const orgs = Object.values(entityCache.orgs.byId);
+    for (const org of orgs) {
+      fetchQueue.addJob({
+        priority: FetchPriority.LOW,
+        entityType: "repos",
+        execute: async () => {
+          const result = await fetchOrgRepos(org.login, { perPage: 100 });
+          if (result.modified && result.data) {
+            entityCache.upsertRepos(result.data, { etag: result.etag });
+            console.log(
+              `[Sync] Cached ${result.data.length} repos for org ${org.login}`,
+            );
+          }
+        },
+      });
+    }
   }
 
   /**
@@ -242,12 +383,10 @@ class SyncOrchestrator {
   }
 
   private async runBackgroundSync(): Promise<void> {
-    // Skip if document is hidden
     if (typeof document !== "undefined" && document.hidden) {
       return;
     }
 
-    // Skip if rate limited
     const rateLimitStore = useRateLimitStore.getState();
     if (rateLimitStore.isRateLimited()) {
       console.log("[Sync] Skipping background sync - rate limited");
@@ -257,18 +396,86 @@ class SyncOrchestrator {
     const entityCache = useEntityCache.getState();
     const fetchQueue = useFetchQueue.getState();
 
-    // Queue background refresh jobs
+    // Refresh issues
     fetchQueue.addJob({
       priority: FetchPriority.LOW,
       entityType: "issues",
       execute: async () => {
-        const since = entityCache.cursors.user
-          ? new Date(entityCache.cursors.user).toISOString()
-          : undefined;
-
-        const result = await fetchUserIssues({ since, state: "open" });
+        const result = await searchUserIssues({ state: "open", perPage: 100 });
         if (result.modified && result.data) {
-          entityCache.upsertIssues(result.data, { etag: result.etag });
+          const issues = result.data.items.map(
+            (item): CachedIssue => ({
+              id: item.id,
+              nodeId: item.nodeId,
+              number: item.number,
+              title: item.title,
+              state: item.state,
+              htmlUrl: item.htmlUrl,
+              repositoryUrl: `https://api.github.com/repos/${item.repositoryFullName}`,
+              repositoryFullName: item.repositoryFullName,
+              createdAt: item.createdAt,
+              updatedAt: item.updatedAt,
+              closedAt: item.closedAt,
+              labels: item.labels,
+              assignees: item.assignees,
+              user: item.user,
+              comments: item.comments,
+              isPullRequest: item.isPullRequest,
+            }),
+          );
+          entityCache.upsertIssues(issues, { etag: result.etag });
+          entityCache.updateCursor("user", Date.now());
+        }
+      },
+    });
+
+    // Refresh PRs
+    fetchQueue.addJob({
+      priority: FetchPriority.LOW,
+      entityType: "pullRequests",
+      execute: async () => {
+        const [reviewResult, authoredResult, assignedResult] =
+          await Promise.allSettled([
+            searchReviewRequestedPRs({ state: "open", perPage: 100 }),
+            searchAuthoredPRs({ state: "open", perPage: 100 }),
+            searchAssignedPRs({ state: "open", perPage: 100 }),
+          ]);
+
+        const allPRs: CachedPullRequest[] = [];
+
+        for (const result of [reviewResult, authoredResult, assignedResult]) {
+          if (
+            result.status === "fulfilled" &&
+            result.value.modified &&
+            result.value.data
+          ) {
+            const prs = result.value.data.items.map(
+              (item): CachedPullRequest => ({
+                id: item.id,
+                nodeId: item.nodeId,
+                number: item.number,
+                title: item.title,
+                state: item.state,
+                htmlUrl: item.htmlUrl,
+                repositoryFullName: item.repositoryFullName,
+                createdAt: item.createdAt,
+                updatedAt: item.updatedAt,
+                closedAt: item.closedAt,
+                mergedAt: item.mergedAt,
+                draft: item.draft,
+                labels: item.labels,
+                user: item.user,
+                requestedReviewers: item.requestedReviewers,
+                head: item.head,
+                base: item.base,
+              }),
+            );
+            allPRs.push(...prs);
+          }
+        }
+
+        if (allPRs.length > 0) {
+          entityCache.upsertPullRequests(allPRs);
           entityCache.updateCursor("user", Date.now());
         }
       },
@@ -277,14 +484,12 @@ class SyncOrchestrator {
 
   /**
    * Visibility Change Handler
-   * Revalidate when tab becomes visible
    */
   private handleVisibilityChange = (): void => {
     if (typeof document === "undefined") return;
 
     if (!document.hidden) {
       const now = Date.now();
-      // Debounce - only sync if more than 30 seconds since last change
       if (now - lastVisibilityChange > 30000) {
         console.log("[Sync] Tab visible - revalidating");
         this.runBackgroundSync();
@@ -295,7 +500,6 @@ class SyncOrchestrator {
 
   /**
    * Online Handler
-   * Resume syncing when network is restored
    */
   private handleOnline = (): void => {
     console.log("[Sync] Network restored - resuming sync");
@@ -305,7 +509,6 @@ class SyncOrchestrator {
 
   /**
    * Offline Handler
-   * Pause syncing when network is lost
    */
   private handleOffline = (): void => {
     console.log("[Sync] Network lost - pausing sync");
@@ -314,7 +517,6 @@ class SyncOrchestrator {
 
   /**
    * Manual Refresh
-   * User-triggered full refresh
    */
   async manualRefresh(): Promise<void> {
     const rateLimitStore = useRateLimitStore.getState();
@@ -322,13 +524,14 @@ class SyncOrchestrator {
     if (rateLimitStore.isRateLimited()) {
       const timeUntilReset = rateLimitStore.getTimeUntilReset();
       console.warn(
-        `[Sync] Rate limited. Try again in ${Math.ceil(timeUntilReset / 1000)} seconds`
+        `[Sync] Rate limited. Try again in ${Math.ceil(timeUntilReset / 1000)} seconds`,
       );
       return;
     }
 
     console.log("[Sync] Manual refresh triggered");
     await this.priorityFetch();
+    this.deferredFetch();
     useEntityCache.getState().updateLastSync();
   }
 
@@ -336,7 +539,7 @@ class SyncOrchestrator {
    * Fetch Workflow Runs for Pinned Repos
    */
   async fetchWorkflowsForPinnedRepos(
-    pinnedRepos: Array<{ owner: string; name: string; fullName: string }>
+    pinnedRepos: Array<{ owner: string; name: string; fullName: string }>,
   ): Promise<void> {
     const entityCache = useEntityCache.getState();
     const fetchQueue = useFetchQueue.getState();
@@ -353,12 +556,19 @@ class SyncOrchestrator {
             });
 
             if (result.modified && result.data) {
-              entityCache.upsertWorkflowRuns(result.data, { etag: result.etag });
-              entityCache.updateRepoCursor(repo.fullName, "workflows", Date.now());
+              entityCache.upsertWorkflowRuns(result.data, {
+                etag: result.etag,
+              });
+              entityCache.updateRepoCursor(
+                repo.fullName,
+                "workflows",
+                Date.now(),
+              );
             }
           } catch (error) {
-            // Silently fail for workflow runs - might not have access
-            console.log(`[Sync] Could not fetch workflows for ${repo.fullName}`);
+            console.log(
+              `[Sync] Could not fetch workflows for ${repo.fullName}`,
+            );
           }
         },
       });
@@ -390,25 +600,19 @@ export function useSyncEngine() {
   const entityCache = useEntityCache();
   const rateLimitStore = useRateLimitStore();
 
-  // Note: Sync initialization is handled by SyncProvider
-  // This hook only provides access to sync state and actions
-
-  // Manual refresh handler
   const refresh = useCallback(async () => {
     const orchestrator = getSyncOrchestrator();
     await orchestrator.manualRefresh();
   }, []);
 
-  // Fetch workflows for pinned repos
   const fetchWorkflowsForPinned = useCallback(
     async (repos: Array<{ owner: string; name: string; fullName: string }>) => {
       const orchestrator = getSyncOrchestrator();
       await orchestrator.fetchWorkflowsForPinnedRepos(repos);
     },
-    []
+    [],
   );
 
-  // Derived state
   const syncStatus = entityCache.syncState.status;
   const lastSyncAt = entityCache.syncState.lastSyncAt;
   const isDegraded = entityCache.syncState.isDegraded;
@@ -416,27 +620,19 @@ export function useSyncEngine() {
   const rateLimitRemaining = rateLimitStore.rateLimit.remaining;
 
   return {
-    // Status
     syncStatus,
     lastSyncAt,
     isDegraded,
     isRateLimited,
     rateLimitRemaining,
-
-    // Actions
     refresh,
     fetchWorkflowsForPinned,
-
-    // Entity access (for convenience)
     repos: entityCache.repos,
     issues: entityCache.issues,
     pullRequests: entityCache.pullRequests,
     workflowRuns: entityCache.workflowRuns,
     orgs: entityCache.orgs,
-
-    // Query helpers
     getOpenIssues: entityCache.getOpenIssues,
     getOpenPRs: entityCache.getOpenPRs,
   };
 }
-

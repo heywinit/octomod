@@ -4,12 +4,14 @@
  */
 
 import { useMemo } from "react";
-import { useEntityCache } from "./entity-store";
+import { formatTimeAgo } from "@/lib/dashboard.service";
+import { useAuthStore } from "@/stores/auth";
 import { usePinnedRepos } from "@/stores/pinned-repos";
+import { useEntityCache } from "./entity-store";
 import type {
   CachedIssue,
-  CachedWorkflowRun,
   CachedRepo,
+  CachedWorkflowRun,
   DerivedIssueState,
   DerivedRepoState,
 } from "./types";
@@ -30,7 +32,7 @@ const URGENT_THRESHOLD_MS = 24 * 60 * 60 * 1000; // 24 hours
  */
 export function computeIssueState(
   issue: CachedIssue,
-  currentUserLogin: string
+  currentUserLogin: string,
 ): DerivedIssueState {
   const now = Date.now();
   const updatedAt = new Date(issue.updatedAt).getTime();
@@ -44,7 +46,9 @@ export function computeIssueState(
 
   // Check if needs attention (assigned, open, recent activity)
   const needsAttention =
-    isAssigned && issue.state === "open" && timeSinceUpdate < URGENT_THRESHOLD_MS;
+    isAssigned &&
+    issue.state === "open" &&
+    timeSinceUpdate < URGENT_THRESHOLD_MS;
 
   // Calculate urgency score (1-5)
   let urgencyScore = 1;
@@ -104,7 +108,7 @@ export function useIssuesByRepo() {
     for (const repo of Object.keys(grouped)) {
       grouped[repo].sort(
         (a, b) =>
-          new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
+          new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
       );
     }
 
@@ -127,11 +131,11 @@ export function usePRsNeedingReview(currentUserLogin: string) {
       .filter(
         (pr) =>
           pr.state === "open" &&
-          pr.requestedReviewers.some((r) => r.login === currentUserLogin)
+          pr.requestedReviewers.some((r) => r.login === currentUserLogin),
       )
       .sort(
         (a, b) =>
-          new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
+          new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
       );
   }, [pullRequests.byId, currentUserLogin]);
 }
@@ -144,12 +148,10 @@ export function useMyOpenPRs(currentUserLogin: string) {
 
   return useMemo(() => {
     return Object.values(pullRequests.byId)
-      .filter(
-        (pr) => pr.state === "open" && pr.user.login === currentUserLogin
-      )
+      .filter((pr) => pr.state === "open" && pr.user.login === currentUserLogin)
       .sort(
         (a, b) =>
-          new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
+          new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
       );
   }, [pullRequests.byId, currentUserLogin]);
 }
@@ -164,7 +166,7 @@ export function useMyOpenPRs(currentUserLogin: string) {
 export function computeRepoState(
   repo: CachedRepo,
   workflowRuns: CachedWorkflowRun[],
-  issues: CachedIssue[]
+  issues: CachedIssue[],
 ): DerivedRepoState {
   const now = Date.now();
   const updatedAt = new Date(repo.updatedAt).getTime();
@@ -191,7 +193,7 @@ export function computeRepoState(
     (issue) =>
       issue.state === "open" &&
       !issue.isPullRequest &&
-      new Date(issue.updatedAt).getTime() > now - URGENT_THRESHOLD_MS
+      new Date(issue.updatedAt).getTime() > now - URGENT_THRESHOLD_MS,
   ).length;
 
   // Check if repo is stale
@@ -222,13 +224,13 @@ export function usePinnedReposEnriched() {
   return useMemo(() => {
     return pinnedRepos.map((pinned) => {
       const cached = Object.values(repos.byId).find(
-        (r) => r.fullName === pinned.fullName
+        (r) => r.fullName === pinned.fullName,
       );
       const repoWorkflows = Object.values(workflowRuns.byId).filter(
-        (w) => w.repositoryFullName === pinned.fullName
+        (w) => w.repositoryFullName === pinned.fullName,
       );
       const repoIssues = Object.values(issues.byId).filter(
-        (i) => i.repositoryFullName === pinned.fullName
+        (i) => i.repositoryFullName === pinned.fullName,
       );
 
       const derivedState = cached
@@ -245,7 +247,7 @@ export function usePinnedReposEnriched() {
         cached,
         ...derivedState,
         openIssueCount: repoIssues.filter(
-          (i) => i.state === "open" && !i.isPullRequest
+          (i) => i.state === "open" && !i.isPullRequest,
         ).length,
         lastActivity: cached?.updatedAt,
       };
@@ -264,15 +266,66 @@ export function useRecentRepos(limit = 10) {
       .sort(
         (a, b) =>
           new Date(b.pushedAt || b.updatedAt).getTime() -
-          new Date(a.pushedAt || a.updatedAt).getTime()
+          new Date(a.pushedAt || a.updatedAt).getTime(),
       )
       .slice(0, limit);
   }, [repos.byId, limit]);
 }
 
-// =============================================================================
-// Activity Feed Selector
-// =============================================================================
+/**
+ * Get issues formatted for display on the home page
+ * Shows recent open issues that need attention
+ */
+export function useRecentIssuesForHome(limit = 7) {
+  const { issues } = useEntityCache();
+
+  return useMemo(() => {
+    return Object.values(issues.byId)
+      .filter((issue) => issue.state === "open" && !issue.isPullRequest)
+      .sort(
+        (a, b) =>
+          new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
+      )
+      .slice(0, limit)
+      .map((issue) => ({
+        id: String(issue.id),
+        number: issue.number,
+        title: issue.title,
+        repository: issue.repositoryFullName,
+        state: issue.state,
+        url: issue.htmlUrl,
+        timeAgo: formatTimeAgo(new Date(issue.updatedAt)),
+        labels: issue.labels.map((l) => l.name),
+      }));
+  }, [issues.byId, limit]);
+}
+
+/**
+ * Get PRs formatted for display on the home page
+ */
+export function useRecentPRsForHome(limit = 5) {
+  const { pullRequests } = useEntityCache();
+
+  return useMemo(() => {
+    return Object.values(pullRequests.byId)
+      .filter((pr) => pr.state === "open")
+      .sort(
+        (a, b) =>
+          new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
+      )
+      .slice(0, limit)
+      .map((pr) => ({
+        id: String(pr.id),
+        number: pr.number,
+        title: pr.title,
+        repository: pr.repositoryFullName,
+        state: pr.state,
+        url: pr.htmlUrl,
+        timeAgo: formatTimeAgo(new Date(pr.updatedAt)),
+        isReviewRequested: true,
+      }));
+  }, [pullRequests.byId, limit]);
+}
 
 interface ActivityItem {
   id: string;
@@ -282,6 +335,13 @@ interface ActivityItem {
   updatedAt: string;
   url: string;
   repository: string;
+  user: { login: string; avatarUrl: string };
+  state: "open" | "closed" | "merged";
+  labels: Array<{ name: string; color: string }>;
+  comments: number;
+  isAssignedToYou: boolean;
+  isReviewRequested: boolean;
+  isDraft: boolean;
 }
 
 /**
@@ -289,33 +349,104 @@ interface ActivityItem {
  */
 export function useActivityFeed(limit = 20) {
   const { issues, pullRequests } = useEntityCache();
+  const user = useAuthStore((state) => state.user);
+  const currentUserLogin = user?.login;
 
   return useMemo(() => {
     const activities: ActivityItem[] = [];
 
+    // Get all issues and PRs from last 14 days, sort by updatedAt desc
+    const fourteenDaysAgo = Date.now() - 14 * 24 * 60 * 60 * 1000;
+
+    const allIssues = Object.values(issues.byId)
+      .filter((i) => !i.isPullRequest)
+      .filter((i) => new Date(i.updatedAt).getTime() > fourteenDaysAgo)
+      .sort(
+        (a, b) =>
+          new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
+      );
+
+    const allPRs = Object.values(pullRequests.byId)
+      .filter((pr) => new Date(pr.updatedAt).getTime() > fourteenDaysAgo)
+      .sort(
+        (a, b) =>
+          new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
+      );
+
     // Add recent issues
-    for (const issue of Object.values(issues.byId).slice(0, limit)) {
+    for (const issue of allIssues.slice(0, limit)) {
+      const isAssignedToYou = issue.assignees.some(
+        (a) => a.login === currentUserLogin,
+      );
+      const primaryLabel = issue.labels[0]?.name;
+
+      let description = "";
+      if (issue.state === "open") {
+        if (isAssignedToYou) {
+          description = `assigned to you${primaryLabel ? ` (${primaryLabel})` : ""}`;
+        } else {
+          description = `opened${primaryLabel ? ` in ${primaryLabel}` : ""}`;
+        }
+      } else {
+        description = issue.state === "closed" ? "closed" : "reopened";
+      }
+
       activities.push({
         id: `issue-${issue.id}`,
         type: "issue",
         title: issue.title,
-        description: `${issue.repositoryFullName} #${issue.number}`,
+        description,
         updatedAt: issue.updatedAt,
         url: issue.htmlUrl,
         repository: issue.repositoryFullName,
+        user: issue.user,
+        state: issue.state,
+        labels: issue.labels,
+        comments: issue.comments,
+        isAssignedToYou,
+        isReviewRequested: false,
+        isDraft: false,
       });
     }
 
     // Add recent PRs
-    for (const pr of Object.values(pullRequests.byId).slice(0, limit)) {
+    for (const pr of allPRs.slice(0, limit)) {
+      const isReviewRequested = pr.requestedReviewers.some(
+        (r) => r.login === currentUserLogin,
+      );
+      const isAssignedToYou = pr.requestedReviewers.some(
+        (r) => r.login === currentUserLogin,
+      );
+      const primaryLabel = pr.labels[0]?.name;
+
+      let description = "";
+      if (pr.draft) {
+        description = "draft PR";
+      } else if (pr.mergedAt) {
+        description = "merged";
+      } else if (pr.state === "closed") {
+        description = "closed";
+      } else if (isReviewRequested) {
+        description = `review requested${primaryLabel ? ` (${primaryLabel})` : ""}`;
+      } else {
+        description = `opened${primaryLabel ? ` in ${primaryLabel}` : ""}`;
+      }
+
       activities.push({
         id: `pr-${pr.id}`,
         type: "pr",
         title: pr.title,
-        description: `${pr.repositoryFullName} #${pr.number}`,
+        description,
         updatedAt: pr.updatedAt,
         url: pr.htmlUrl,
         repository: pr.repositoryFullName,
+        user: pr.user,
+        state: pr.state,
+        labels: pr.labels,
+        comments: 0,
+        isAssignedToYou,
+        isReviewRequested,
+        isDraft: pr.draft,
       });
     }
 
@@ -324,7 +455,7 @@ export function useActivityFeed(limit = 20) {
     return activities
       .sort(
         (a, b) =>
-          new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
+          new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
       )
       .filter((item) => {
         const key = `${item.repository}:${item.title}`;
@@ -333,7 +464,7 @@ export function useActivityFeed(limit = 20) {
         return true;
       })
       .slice(0, limit);
-  }, [issues.byId, pullRequests.byId, limit]);
+  }, [issues.byId, pullRequests.byId, limit, currentUserLogin]);
 }
 
 // =============================================================================
@@ -345,6 +476,7 @@ export interface DashboardMetrics {
   openIssues: number;
   openPRs: number;
   reposNeedingAttention: number;
+  reposNeedingAttentionList: string[];
 }
 
 /**
@@ -358,33 +490,34 @@ export function useDashboardMetrics(): DashboardMetrics {
     const thirtyDaysAgo = now - 30 * 24 * 60 * 60 * 1000;
 
     const activeRepos = Object.values(repos.byId).filter(
-      (repo) => new Date(repo.updatedAt).getTime() > thirtyDaysAgo
+      (repo) => new Date(repo.updatedAt).getTime() > thirtyDaysAgo,
     ).length;
 
     const openIssues = Object.values(issues.byId).filter(
-      (issue) => issue.state === "open" && !issue.isPullRequest
+      (issue) => issue.state === "open" && !issue.isPullRequest,
     ).length;
 
     const openPRs = Object.values(pullRequests.byId).filter(
-      (pr) => pr.state === "open"
+      (pr) => pr.state === "open",
     ).length;
 
-    // Repos needing attention = repos with failing CI or open issues
-    const reposNeedingAttention = Object.values(repos.byId).filter((repo) => {
+    // Repos needing attention = repos with open issues
+    const reposWithIssues = Object.values(repos.byId).filter((repo) => {
       const repoIssues = Object.values(issues.byId).filter(
         (i) =>
           i.repositoryFullName === repo.fullName &&
           i.state === "open" &&
-          !i.isPullRequest
+          !i.isPullRequest,
       );
       return repoIssues.length > 0;
-    }).length;
+    });
 
     return {
       activeRepos,
       openIssues,
       openPRs,
-      reposNeedingAttention,
+      reposNeedingAttention: reposWithIssues.length,
+      reposNeedingAttentionList: reposWithIssues.map((r) => r.fullName),
     };
   }, [repos.byId, issues.byId, pullRequests.byId]);
 }
@@ -417,7 +550,7 @@ export function useCIAlerts(): CIAlert[] {
         (run) =>
           pinnedFullNames.has(run.repositoryFullName) &&
           run.status === "completed" &&
-          (run.conclusion === "failure" || run.conclusion === "timed_out")
+          (run.conclusion === "failure" || run.conclusion === "timed_out"),
       )
       .map((run): CIAlert => {
         let status: "failure" | "error" | "warning";
@@ -442,3 +575,90 @@ export function useCIAlerts(): CIAlert[] {
   }, [workflowRuns.byId, pinnedRepos]);
 }
 
+// =============================================================================
+// Notifications
+// =============================================================================
+
+export interface Notification {
+  id: string;
+  type: "review_requested" | "assigned" | "mention" | "ci_failed";
+  title: string;
+  description: string;
+  repository: string;
+  url: string;
+  timeAgo: string;
+}
+
+export function useNotifications(limit = 10): Notification[] {
+  const { issues, pullRequests } = useEntityCache();
+  const user = useAuthStore((state) => state.user);
+  const currentUserLogin = user?.login;
+  const ciAlerts = useCIAlerts();
+
+  return useMemo(() => {
+    const notifications: Notification[] = [];
+
+    // Review requests on PRs
+    for (const pr of Object.values(pullRequests.byId)) {
+      const isReviewRequested = pr.requestedReviewers.some(
+        (r) => r.login === currentUserLogin,
+      );
+      if (isReviewRequested) {
+        notifications.push({
+          id: `pr-review-${pr.id}`,
+          type: "review_requested",
+          title: pr.title,
+          description: "review requested",
+          repository: pr.repositoryFullName,
+          url: pr.htmlUrl,
+          timeAgo: pr.updatedAt,
+        });
+      }
+    }
+
+    // Assigned issues
+    for (const issue of Object.values(issues.byId)) {
+      if (issue.isPullRequest) continue;
+      const isAssigned = issue.assignees.some(
+        (a) => a.login === currentUserLogin,
+      );
+      if (isAssigned && issue.state === "open") {
+        notifications.push({
+          id: `issue-assigned-${issue.id}`,
+          type: "assigned",
+          title: issue.title,
+          description: "assigned to you",
+          repository: issue.repositoryFullName,
+          url: issue.htmlUrl,
+          timeAgo: issue.updatedAt,
+        });
+      }
+    }
+
+    // CI failures
+    for (const alert of ciAlerts) {
+      notifications.push({
+        id: `ci-${alert.id}`,
+        type: "ci_failed",
+        title: `${alert.workflow} failed on ${alert.branch}`,
+        description: alert.status === "error" ? "timed out" : alert.status,
+        repository: alert.repository,
+        url: alert.url,
+        timeAgo: alert.repository,
+      });
+    }
+
+    // Sort and dedupe
+    const seen = new Set<string>();
+    return notifications
+      .sort(
+        (a, b) => new Date(b.timeAgo).getTime() - new Date(a.timeAgo).getTime(),
+      )
+      .filter((n) => {
+        if (seen.has(n.id)) return false;
+        seen.add(n.id);
+        return true;
+      })
+      .slice(0, limit);
+  }, [issues.byId, pullRequests.byId, ciAlerts, currentUserLogin, limit]);
+}

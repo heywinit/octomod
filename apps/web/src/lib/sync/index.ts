@@ -3,53 +3,64 @@
  * Client-side GitHub data sync with caching and rate limiting
  */
 
-// Types
-export * from "./types";
-
+// Database
+export { clearAllData, db } from "./database";
 // Stores
 export { useEntityCache } from "./entity-store";
-export { useRateLimitStore, useFetchQueue } from "./rate-limiter";
-
+export type { GitHubNotification } from "./github-api";
 // API
 export {
+  fetchNotifications,
+  fetchRateLimit,
+  fetchRepoWorkflowRuns,
+  fetchReviewRequests,
+  fetchUser,
+  fetchUserIssues,
+  fetchUserOrgs,
+  fetchUserRepos,
   getOctokit,
   resetOctokit,
-  fetchUser,
-  fetchUserRepos,
-  fetchUserIssues,
-  fetchReviewRequests,
-  fetchUserOrgs,
-  fetchRepoWorkflowRuns,
-  fetchUserCounts,
-  fetchRateLimit,
 } from "./github-api";
+export { useFetchQueue, useRateLimitStore } from "./rate-limiter";
+// Search
+export {
+  clearSearchCache,
+  searchAllIssues,
+  searchAllPRs,
+  searchRepositories,
+} from "./search";
+// Selectors
+export {
+  type CIAlert,
+  // Issue selectors
+  computeIssueState,
+  // Repo selectors
+  computeRepoState,
+  type DashboardMetrics,
+  // Notification selectors
+  type Notification,
+  // Activity selectors
+  useActivityFeed,
+  useCIAlerts,
+  // Dashboard selectors
+  useDashboardMetrics,
+  useIssuesByRepo,
+  useIssuesNeedingAttention,
+  useMyOpenPRs,
+  useNotifications,
+  usePinnedReposEnriched,
+  // PR selectors
+  usePRsNeedingReview,
+  useRecentIssuesForHome,
+  useRecentPRsForHome,
+  useRecentRepos,
+} from "./selectors";
 
 // Orchestrator
 export {
-  getSyncOrchestrator,
   destroySyncOrchestrator,
+  getSyncOrchestrator,
   useSyncEngine,
 } from "./sync-orchestrator";
-
-// Selectors
-export {
-  // Issue selectors
-  computeIssueState,
-  useIssuesNeedingAttention,
-  useIssuesByRepo,
-  // PR selectors
-  usePRsNeedingReview,
-  useMyOpenPRs,
-  // Repo selectors
-  computeRepoState,
-  usePinnedReposEnriched,
-  useRecentRepos,
-  // Activity selectors
-  useActivityFeed,
-  // Dashboard selectors
-  useDashboardMetrics,
-  useCIAlerts,
-  type DashboardMetrics,
-  type CIAlert,
-} from "./selectors";
-
+// Types
+export * from "./types";

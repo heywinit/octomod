@@ -7,12 +7,15 @@ import { Octokit } from "octokit";
 import { STORAGE_KEYS } from "../constants";
 import { useRateLimitStore } from "./rate-limiter";
 import type {
-  ConditionalFetchResult,
-  CachedRepo,
   CachedIssue,
-  CachedPullRequest,
-  CachedWorkflowRun,
   CachedOrg,
+  CachedPullRequest,
+  CachedRepo,
+  CachedWorkflowRun,
+  ConditionalFetchResult,
+  SearchResultIssue,
+  SearchResultPR,
+  SearchResultRepo,
 } from "./types";
 
 // =============================================================================
@@ -70,31 +73,36 @@ interface ConditionalRequestOptions {
 
 async function conditionalRequest<T>(
   request: () => Promise<{ data: T; headers: Record<string, unknown> }>,
-  _options: ConditionalRequestOptions = {}
+  options: ConditionalRequestOptions = {},
 ): Promise<ConditionalFetchResult<T>> {
   try {
+    const headers: Record<string, string> = {};
+
+    if (options.etag) {
+      headers["If-None-Match"] = options.etag;
+    }
+    if (options.lastModified) {
+      headers["If-Modified-Since"] = options.lastModified;
+    }
+
     const response = await request();
 
-    // Update rate limit from response
-    const rateLimit = parseRateLimitHeaders(response.headers);
     updateRateLimitFromHeaders(response.headers);
 
     return {
       modified: true,
       data: response.data,
       etag: response.headers.etag as string | undefined,
-      rateLimit,
+      rateLimit: parseRateLimitHeaders(response.headers),
     };
   } catch (error: unknown) {
-    // Handle 304 Not Modified
     if (error && typeof error === "object" && "status" in error) {
       const status = (error as { status: number }).status;
 
       if (status === 304) {
-        // Parse rate limit from error response if available
         const headers =
-          (error as { response?: { headers: Record<string, unknown> } }).response
-            ?.headers || {};
+          (error as { response?: { headers: Record<string, unknown> } })
+            .response?.headers || {};
         const rateLimit = parseRateLimitHeaders(headers);
         updateRateLimitFromHeaders(headers);
 
@@ -114,6 +122,30 @@ async function conditionalRequest<T>(
 // =============================================================================
 
 function transformRepo(repo: any): CachedRepo {
+  return {
+    id: repo.id,
+    nodeId: repo.node_id,
+    name: repo.name,
+    fullName: repo.full_name,
+    owner: {
+      login: repo.owner.login,
+      avatarUrl: repo.owner.avatar_url,
+    },
+    description: repo.description,
+    htmlUrl: repo.html_url,
+    updatedAt: repo.updated_at,
+    pushedAt: repo.pushed_at,
+    stargazersCount: repo.stargazers_count,
+    forksCount: repo.forks_count,
+    language: repo.language,
+    openIssuesCount: repo.open_issues_count,
+    visibility: repo.visibility,
+    defaultBranch: repo.default_branch,
+    isPrivate: repo.private,
+  };
+}
+
+function transformSearchRepo(repo: any): SearchResultRepo {
   return {
     id: repo.id,
     nodeId: repo.node_id,
@@ -174,7 +206,84 @@ function transformIssue(issue: any): CachedIssue {
   };
 }
 
-function transformPullRequest(pr: any): CachedPullRequest {
+function transformSearchIssue(issue: any): SearchResultIssue {
+  const repoFullName =
+    issue.repository?.full_name ||
+    issue.repository_url?.split("/").slice(-2).join("/") ||
+    "";
+
+  return {
+    id: issue.id,
+    nodeId: issue.node_id,
+    number: issue.number,
+    title: issue.title,
+    state: issue.state,
+    htmlUrl: issue.html_url,
+    repositoryFullName: repoFullName,
+    createdAt: issue.created_at,
+    updatedAt: issue.updated_at,
+    closedAt: issue.closed_at,
+    labels: (issue.labels || [])
+      .filter((l: any) => typeof l === "object")
+      .map((l: any) => ({
+        name: l.name,
+        color: l.color,
+      })),
+    assignees: (issue.assignees || []).map((a: any) => ({
+      login: a.login,
+      avatarUrl: a.avatar_url,
+    })),
+    user: {
+      login: issue.user?.login || "unknown",
+      avatarUrl: issue.user?.avatar_url || "",
+    },
+    comments: issue.comments || 0,
+    isPullRequest: !!issue.pull_request,
+  };
+}
+
+function transformPR(pr: any): CachedPullRequest {
+  const repoFullName =
+    pr.base?.repo?.full_name ||
+    pr.html_url?.split("/").slice(3, 5).join("/") ||
+    "";
+
+  return {
+    id: pr.id,
+    nodeId: pr.node_id,
+    number: pr.number,
+    title: pr.title,
+    state: pr.merged_at ? "merged" : pr.state,
+    htmlUrl: pr.html_url,
+    repositoryFullName: repoFullName,
+    createdAt: pr.created_at,
+    updatedAt: pr.updated_at,
+    closedAt: pr.closed_at,
+    mergedAt: pr.merged_at,
+    draft: pr.draft || false,
+    labels: (pr.labels || []).map((l: any) => ({
+      name: l.name,
+      color: l.color,
+    })),
+    user: {
+      login: pr.user?.login || "unknown",
+      avatarUrl: pr.user?.avatar_url || "",
+    },
+    requestedReviewers: (pr.requested_reviewers || []).map((r: any) => ({
+      login: r.login,
+      avatarUrl: r.avatar_url,
+    })),
+    head: {
+      ref: pr.head?.ref || "",
+      sha: pr.head?.sha || "",
+    },
+    base: {
+      ref: pr.base?.ref || "",
+    },
+  };
+}
+
+function transformSearchPR(pr: any): SearchResultPR {
   const repoFullName =
     pr.base?.repo?.full_name ||
     pr.html_url?.split("/").slice(3, 5).join("/") ||
@@ -241,12 +350,9 @@ function transformOrg(org: any): CachedOrg {
 }
 
 // =============================================================================
-// API Functions
+// API Functions - User & Orgs
 // =============================================================================
 
-/**
- * Fetch authenticated user
- */
 export async function fetchUser(): Promise<ConditionalFetchResult<any>> {
   const octokit = getOctokit();
   if (!octokit) throw new Error("No authentication");
@@ -260,15 +366,438 @@ export async function fetchUser(): Promise<ConditionalFetchResult<any>> {
   });
 }
 
+export async function fetchUserOrgs(
+  options: { etag?: string } = {},
+): Promise<ConditionalFetchResult<CachedOrg[]>> {
+  const octokit = getOctokit();
+  if (!octokit) throw new Error("No authentication");
+
+  return conditionalRequest(
+    async () => {
+      const response = await octokit.rest.orgs.listForAuthenticatedUser({
+        per_page: 100,
+        headers: options.etag ? { "If-None-Match": options.etag } : undefined,
+      });
+
+      return {
+        data: response.data.map(transformOrg),
+        headers: response.headers as Record<string, unknown>,
+      };
+    },
+    { etag: options.etag },
+  );
+}
+
+// =============================================================================
+// API Functions - Repos (Multiple Types)
+// =============================================================================
+
 /**
- * Fetch user's repositories with optional ETag
+ * Fetch repositories the user owns
+ */
+export async function fetchUserOwnedRepos(
+  options: { etag?: string; perPage?: number } = {},
+): Promise<ConditionalFetchResult<CachedRepo[]>> {
+  const octokit = getOctokit();
+  if (!octokit) throw new Error("No authentication");
+
+  const { perPage = 100 } = options;
+
+  return conditionalRequest(
+    async () => {
+      const response = await octokit.rest.repos.listForAuthenticatedUser({
+        sort: "updated",
+        direction: "desc",
+        per_page: perPage,
+        type: "owner",
+        headers: options.etag ? { "If-None-Match": options.etag } : undefined,
+      });
+
+      return {
+        data: response.data.map(transformRepo),
+        headers: response.headers as Record<string, unknown>,
+      };
+    },
+    { etag: options.etag },
+  );
+}
+
+/**
+ * Fetch repositories where user is a collaborator (invited to private repos)
+ */
+export async function fetchUserCollaboratorRepos(
+  options: { etag?: string; perPage?: number } = {},
+): Promise<ConditionalFetchResult<CachedRepo[]>> {
+  const octokit = getOctokit();
+  if (!octokit) throw new Error("No authentication");
+
+  const { perPage = 100 } = options;
+
+  return conditionalRequest(
+    async () => {
+      const response = await octokit.rest.repos.listForAuthenticatedUser({
+        sort: "updated",
+        direction: "desc",
+        per_page: perPage,
+        type: "collaborator" as "owner",
+        headers: options.etag ? { "If-None-Match": options.etag } : undefined,
+      });
+
+      return {
+        data: response.data.map(transformRepo),
+        headers: response.headers as Record<string, unknown>,
+      };
+    },
+    { etag: options.etag },
+  );
+}
+
+/**
+ * Fetch repositories where user is a member (org repos)
+ */
+export async function fetchUserMemberRepos(
+  options: { etag?: string; perPage?: number } = {},
+): Promise<ConditionalFetchResult<CachedRepo[]>> {
+  const octokit = getOctokit();
+  if (!octokit) throw new Error("No authentication");
+
+  const { perPage = 100 } = options;
+
+  return conditionalRequest(
+    async () => {
+      const response = await octokit.rest.repos.listForAuthenticatedUser({
+        sort: "updated",
+        direction: "desc",
+        per_page: perPage,
+        type: "member",
+        headers: options.etag ? { "If-None-Match": options.etag } : undefined,
+      });
+
+      return {
+        data: response.data.map(transformRepo),
+        headers: response.headers as Record<string, unknown>,
+      };
+    },
+    { etag: options.etag },
+  );
+}
+
+/**
+ * Fetch all repositories from an organization
+ */
+export async function fetchOrgRepos(
+  org: string,
+  options: { etag?: string; perPage?: number } = {},
+): Promise<ConditionalFetchResult<CachedRepo[]>> {
+  const octokit = getOctokit();
+  if (!octokit) throw new Error("No authentication");
+
+  const { perPage = 100 } = options;
+
+  return conditionalRequest(
+    async () => {
+      const response = await octokit.rest.repos.listForOrg({
+        org,
+        sort: "updated",
+        direction: "desc",
+        per_page: perPage,
+        headers: options.etag ? { "If-None-Match": options.etag } : undefined,
+      });
+
+      return {
+        data: response.data.map(transformRepo),
+        headers: response.headers as Record<string, unknown>,
+      };
+    },
+    { etag: options.etag },
+  );
+}
+
+// =============================================================================
+// API Functions - Issues (Search API)
+// =============================================================================
+
+/**
+ * Search for issues involving the user
+ * Uses Search API to get ALL issues where user is: author, assignee, or mentioned
+ */
+export async function searchUserIssues(
+  options: {
+    etag?: string;
+    state?: "open" | "closed" | "all";
+    perPage?: number;
+    page?: number;
+    sort?: "created" | "updated" | "comments";
+  } = {},
+): Promise<
+  ConditionalFetchResult<{ items: SearchResultIssue[]; totalCount: number }>
+> {
+  const octokit = getOctokit();
+  if (!octokit) throw new Error("No authentication");
+
+  const { state = "open", perPage = 100, page = 1, sort = "updated" } = options;
+
+  const userResult = await octokit.rest.users.getAuthenticated();
+  const username = userResult.data.login;
+
+  return conditionalRequest(
+    async () => {
+      const response = await octokit.rest.search.issuesAndPullRequests({
+        q: `is:issue is:${state} involves:${username}`,
+        sort,
+        order: "desc",
+        per_page: perPage,
+        page,
+        headers: options.etag ? { "If-None-Match": options.etag } : undefined,
+      });
+
+      return {
+        data: {
+          items: response.data.items.map(transformSearchIssue),
+          totalCount: response.data.total_count,
+        },
+        headers: response.headers as Record<string, unknown>,
+      };
+    },
+    { etag: options.etag },
+  );
+}
+
+// =============================================================================
+// API Functions - Pull Requests (Search API)
+// =============================================================================
+
+/**
+ * Search for PRs authored by the user
+ */
+export async function searchAuthoredPRs(
+  options: {
+    etag?: string;
+    state?: "open" | "closed" | "all";
+    perPage?: number;
+    page?: number;
+  } = {},
+): Promise<
+  ConditionalFetchResult<{ items: SearchResultPR[]; totalCount: number }>
+> {
+  const octokit = getOctokit();
+  if (!octokit) throw new Error("No authentication");
+
+  const { state = "open", perPage = 100, page = 1 } = options;
+
+  const userResult = await octokit.rest.users.getAuthenticated();
+  const username = userResult.data.login;
+
+  return conditionalRequest(
+    async () => {
+      const response = await octokit.rest.search.issuesAndPullRequests({
+        q: `is:pr is:${state} author:${username}`,
+        sort: "updated",
+        order: "desc",
+        per_page: perPage,
+        page,
+        headers: options.etag ? { "If-None-Match": options.etag } : undefined,
+      });
+
+      return {
+        data: {
+          items: response.data.items.map(transformSearchPR),
+          totalCount: response.data.total_count,
+        },
+        headers: response.headers as Record<string, unknown>,
+      };
+    },
+    { etag: options.etag },
+  );
+}
+
+/**
+ * Search for PRs where user is requested for review
+ */
+export async function searchReviewRequestedPRs(
+  options: {
+    etag?: string;
+    state?: "open" | "closed" | "all";
+    perPage?: number;
+    page?: number;
+  } = {},
+): Promise<
+  ConditionalFetchResult<{ items: SearchResultPR[]; totalCount: number }>
+> {
+  const octokit = getOctokit();
+  if (!octokit) throw new Error("No authentication");
+
+  const { state = "open", perPage = 100, page = 1 } = options;
+
+  const userResult = await octokit.rest.users.getAuthenticated();
+  const username = userResult.data.login;
+
+  return conditionalRequest(
+    async () => {
+      const response = await octokit.rest.search.issuesAndPullRequests({
+        q: `is:pr is:${state} review-requested:${username}`,
+        sort: "updated",
+        order: "desc",
+        per_page: perPage,
+        page,
+        headers: options.etag ? { "If-None-Match": options.etag } : undefined,
+      });
+
+      return {
+        data: {
+          items: response.data.items.map(transformSearchPR),
+          totalCount: response.data.total_count,
+        },
+        headers: response.headers as Record<string, unknown>,
+      };
+    },
+    { etag: options.etag },
+  );
+}
+
+/**
+ * Search for PRs assigned to the user
+ */
+export async function searchAssignedPRs(
+  options: {
+    etag?: string;
+    state?: "open" | "closed" | "all";
+    perPage?: number;
+    page?: number;
+  } = {},
+): Promise<
+  ConditionalFetchResult<{ items: SearchResultPR[]; totalCount: number }>
+> {
+  const octokit = getOctokit();
+  if (!octokit) throw new Error("No authentication");
+
+  const { state = "open", perPage = 100, page = 1 } = options;
+
+  const userResult = await octokit.rest.users.getAuthenticated();
+  const username = userResult.data.login;
+
+  return conditionalRequest(
+    async () => {
+      const response = await octokit.rest.search.issuesAndPullRequests({
+        q: `is:pr is:${state} assignee:${username}`,
+        sort: "updated",
+        order: "desc",
+        per_page: perPage,
+        page,
+        headers: options.etag ? { "If-None-Match": options.etag } : undefined,
+      });
+
+      return {
+        data: {
+          items: response.data.items.map(transformSearchPR),
+          totalCount: response.data.total_count,
+        },
+        headers: response.headers as Record<string, unknown>,
+      };
+    },
+    { etag: options.etag },
+  );
+}
+
+// =============================================================================
+// API Functions - Generic Search
+// =============================================================================
+
+/**
+ * Generic search for issues/PRs
+ */
+export async function searchIssues(
+  query: string,
+  options: {
+    etag?: string;
+    perPage?: number;
+    page?: number;
+  } = {},
+): Promise<
+  ConditionalFetchResult<{ items: SearchResultIssue[]; totalCount: number }>
+> {
+  const octokit = getOctokit();
+  if (!octokit) throw new Error("No authentication");
+
+  const { perPage = 50, page = 1 } = options;
+
+  return conditionalRequest(
+    async () => {
+      const response = await octokit.rest.search.issuesAndPullRequests({
+        q: query,
+        per_page: perPage,
+        page,
+        headers: options.etag ? { "If-None-Match": options.etag } : undefined,
+      });
+
+      return {
+        data: {
+          items: response.data.items.map(transformSearchIssue),
+          totalCount: response.data.total_count,
+        },
+        headers: response.headers as Record<string, unknown>,
+      };
+    },
+    { etag: options.etag },
+  );
+}
+
+/**
+ * Generic search for repositories
+ */
+export async function searchRepos(
+  query: string,
+  options: {
+    etag?: string;
+    perPage?: number;
+    page?: number;
+    sort?: "stars" | "forks" | "updated";
+  } = {},
+): Promise<
+  ConditionalFetchResult<{ items: SearchResultRepo[]; totalCount: number }>
+> {
+  const octokit = getOctokit();
+  if (!octokit) throw new Error("No authentication");
+
+  const { perPage = 30, page = 1, sort = "stars" } = options;
+
+  return conditionalRequest(
+    async () => {
+      const response = await octokit.rest.search.repos({
+        q: query,
+        sort,
+        order: "desc",
+        per_page: perPage,
+        page,
+        headers: options.etag ? { "If-None-Match": options.etag } : undefined,
+      });
+
+      return {
+        data: {
+          items: response.data.items.map(transformSearchRepo),
+          totalCount: response.data.total_count,
+        },
+        headers: response.headers as Record<string, unknown>,
+      };
+    },
+    { etag: options.etag },
+  );
+}
+
+// =============================================================================
+// API Functions - Legacy (kept for compatibility)
+// =============================================================================
+
+/**
+ * Fetch user's repositories (all types combined)
+ * @deprecated Use fetchUserOwnedRepos, fetchUserCollaboratorRepos, fetchUserMemberRepos instead
  */
 export async function fetchUserRepos(
   options: {
     etag?: string;
     perPage?: number;
     sort?: "updated" | "pushed" | "full_name";
-  } = {}
+  } = {},
 ): Promise<ConditionalFetchResult<CachedRepo[]>> {
   const octokit = getOctokit();
   if (!octokit) throw new Error("No authentication");
@@ -290,12 +819,13 @@ export async function fetchUserRepos(
         headers: response.headers as Record<string, unknown>,
       };
     },
-    { etag: options.etag }
+    { etag: options.etag },
   );
 }
 
 /**
  * Fetch issues for authenticated user
+ * @deprecated Use searchUserIssues instead
  */
 export async function fetchUserIssues(
   options: {
@@ -304,7 +834,7 @@ export async function fetchUserIssues(
     filter?: "assigned" | "created" | "mentioned" | "subscribed" | "all";
     state?: "open" | "closed" | "all";
     perPage?: number;
-  } = {}
+  } = {},
 ): Promise<ConditionalFetchResult<CachedIssue[]>> {
   const octokit = getOctokit();
   if (!octokit) throw new Error("No authentication");
@@ -328,25 +858,24 @@ export async function fetchUserIssues(
         headers: response.headers as Record<string, unknown>,
       };
     },
-    { etag: options.etag }
+    { etag: options.etag },
   );
 }
 
 /**
  * Fetch PRs where user is requested for review
+ * @deprecated Use searchReviewRequestedPRs instead
  */
 export async function fetchReviewRequests(
-  options: { etag?: string } = {}
+  options: { etag?: string } = {},
 ): Promise<ConditionalFetchResult<CachedPullRequest[]>> {
   const octokit = getOctokit();
   if (!octokit) throw new Error("No authentication");
 
   return conditionalRequest(
     async () => {
-      // Get user first
       const { data: user } = await octokit.rest.users.getAuthenticated();
 
-      // Search for PRs where user is requested as reviewer
       const response = await octokit.rest.search.issuesAndPullRequests({
         q: `is:pr is:open review-requested:${user.login}`,
         sort: "updated",
@@ -356,39 +885,17 @@ export async function fetchReviewRequests(
       });
 
       return {
-        data: response.data.items.map(transformPullRequest),
+        data: response.data.items.map(transformPR),
         headers: response.headers as Record<string, unknown>,
       };
     },
-    { etag: options.etag }
+    { etag: options.etag },
   );
 }
 
-/**
- * Fetch user's organizations
- */
-export async function fetchUserOrgs(
-  options: { etag?: string } = {}
-): Promise<ConditionalFetchResult<CachedOrg[]>> {
-  const octokit = getOctokit();
-  if (!octokit) throw new Error("No authentication");
-
-  return conditionalRequest(
-    async () => {
-      const response =
-        await octokit.rest.orgs.listForAuthenticatedUser({
-          per_page: 100,
-          headers: options.etag ? { "If-None-Match": options.etag } : undefined,
-        });
-
-      return {
-        data: response.data.map(transformOrg),
-        headers: response.headers as Record<string, unknown>,
-      };
-    },
-    { etag: options.etag }
-  );
-}
+// =============================================================================
+// API Functions - Workflow Runs
+// =============================================================================
 
 /**
  * Fetch workflow runs for a repository
@@ -400,7 +907,7 @@ export async function fetchRepoWorkflowRuns(
     etag?: string;
     branch?: string;
     perPage?: number;
-  } = {}
+  } = {},
 ): Promise<ConditionalFetchResult<CachedWorkflowRun[]>> {
   const octokit = getOctokit();
   if (!octokit) throw new Error("No authentication");
@@ -422,44 +929,13 @@ export async function fetchRepoWorkflowRuns(
         headers: response.headers as Record<string, unknown>,
       };
     },
-    { etag: options.etag }
+    { etag: options.etag },
   );
 }
 
-/**
- * Fetch issues and PRs count for user (for metrics)
- */
-export async function fetchUserCounts(): Promise<{
-  openIssues: number;
-  openPRs: number;
-}> {
-  const octokit = getOctokit();
-  if (!octokit) throw new Error("No authentication");
-
-  const { data: user } = await octokit.rest.users.getAuthenticated();
-
-  const [issuesResult, prsResult] = await Promise.allSettled([
-    octokit.rest.search.issuesAndPullRequests({
-      q: `is:issue is:open involves:${user.login}`,
-      per_page: 1,
-    }),
-    octokit.rest.search.issuesAndPullRequests({
-      q: `is:pr is:open involves:${user.login}`,
-      per_page: 1,
-    }),
-  ]);
-
-  return {
-    openIssues:
-      issuesResult.status === "fulfilled"
-        ? issuesResult.value.data.total_count
-        : 0,
-    openPRs:
-      prsResult.status === "fulfilled"
-        ? prsResult.value.data.total_count
-        : 0,
-  };
-}
+// =============================================================================
+// API Functions - Rate Limit
+// =============================================================================
 
 /**
  * Fetch rate limit status
@@ -476,3 +952,69 @@ export async function fetchRateLimit(): Promise<void> {
   }
 }
 
+// =============================================================================
+// API Functions - Notifications (for future use)
+// =============================================================================
+
+export interface GitHubNotification {
+  id: string;
+  unread: boolean;
+  reason: string;
+  updatedAt: string;
+  subject: {
+    title: string;
+    type: string;
+    url: string;
+  };
+  repository: {
+    fullName: string;
+    name: string;
+    owner: string;
+  };
+  url: string;
+}
+
+/**
+ * Fetch notifications for authenticated user
+ */
+export async function fetchNotifications(
+  options: { etag?: string; all?: boolean; perPage?: number } = {},
+): Promise<ConditionalFetchResult<GitHubNotification[]>> {
+  const octokit = getOctokit();
+  if (!octokit) throw new Error("No authentication");
+
+  const { all = false, perPage = 50 } = options;
+
+  return conditionalRequest(
+    async () => {
+      const response =
+        await octokit.rest.activity.listNotificationsForAuthenticatedUser({
+          all,
+          per_page: perPage,
+          headers: options.etag ? { "If-None-Match": options.etag } : undefined,
+        });
+
+      return {
+        data: response.data.map((n) => ({
+          id: n.id,
+          unread: n.unread,
+          reason: n.reason,
+          updatedAt: n.updated_at,
+          subject: {
+            title: n.subject.title,
+            type: n.subject.type,
+            url: n.subject.url,
+          },
+          repository: {
+            fullName: n.repository.full_name,
+            name: n.repository.name,
+            owner: n.repository.owner.login,
+          },
+          url: n.subject.url,
+        })),
+        headers: response.headers as Record<string, unknown>,
+      };
+    },
+    { etag: options.etag },
+  );
+}
