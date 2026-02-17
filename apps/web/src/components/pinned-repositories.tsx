@@ -1,23 +1,23 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
-import { AlertCircle, Pin, Search, Loader2 } from "lucide-react";
-import { cn } from "@/lib/utils";
-import { formatTimeAgo } from "@/lib/dashboard.service";
-import { usePinnedRepos } from "@/stores/pinned-repos";
-import { useRecentRepos, useEntityCache } from "@/lib/sync";
+import { AlertCircle, Loader2, Pin, Search } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
 import {
   ResponsiveDialog,
   ResponsiveDialogContent,
+  ResponsiveDialogDescription,
   ResponsiveDialogHeader,
   ResponsiveDialogTitle,
-  ResponsiveDialogDescription,
 } from "@/components/ui/revola";
+import { formatTimeAgo } from "@/lib/dashboard.service";
+import { useEntityCache, useRecentRepos } from "@/lib/sync";
 import { getOctokit } from "@/lib/sync/github-api";
+import { cn } from "@/lib/utils";
 import type { Repo } from "@/stores/pinned-repos";
+import { usePinnedRepos } from "@/stores/pinned-repos";
 
 interface PinnedRepositoryCardProps {
   repo: {
@@ -61,7 +61,7 @@ function PinnedRepositoryCard({ repo }: PinnedRepositoryCardProps) {
       href={`https://github.com/${repo.fullName}`}
       target="_blank"
       rel="noopener noreferrer"
-      className="group flex items-center justify-between gap-2 rounded-md bg-muted/70 pl-2.5 pr-2 py-1.5 transition-colors hover:bg-muted"
+      className="group flex items-center justify-between gap-2 rounded-md border border-border/50 bg-card py-1.5 pr-2 pl-2.5 transition-colors hover:bg-accent"
     >
       <div className="flex min-w-0 flex-1 items-center gap-2">
         <div
@@ -156,7 +156,9 @@ function SuggestedRepositoryCard({ repo }: SuggestedRepositoryCardProps) {
           )}
         </div>
         <div className="flex items-center gap-2">
-          <span className="text-muted-foreground text-xs">{repo.owner.login}</span>
+          <span className="text-muted-foreground text-xs">
+            {repo.owner.login}
+          </span>
           {repo.stargazersCount > 0 && (
             <span className="text-muted-foreground text-xs">
               ⭐ {repo.stargazersCount}
@@ -191,7 +193,9 @@ function SuggestedRepositoryCard({ repo }: SuggestedRepositoryCardProps) {
 /**
  * Parse GitHub URL or owner/repo string to extract owner and repo name
  */
-function parseGitHubRepo(input: string): { owner: string; repo: string } | null {
+function parseGitHubRepo(
+  input: string,
+): { owner: string; repo: string } | null {
   if (!input.trim()) return null;
 
   // Remove whitespace and trailing slashes
@@ -199,14 +203,14 @@ function parseGitHubRepo(input: string): { owner: string; repo: string } | null 
 
   // Handle full GitHub URLs (with or without protocol, with or without www)
   const urlMatch = cleaned.match(
-    /(?:https?:\/\/)?(?:www\.)?github\.com\/([^\/\s?#]+)\/([^\/\s?#]+)/i,
+    /(?:https?:\/\/)?(?:www\.)?github\.com\/([^/\s?#]+)\/([^/\s?#]+)/i,
   );
   if (urlMatch) {
     return { owner: urlMatch[1], repo: urlMatch[2] };
   }
 
   // Handle owner/repo format
-  const simpleMatch = cleaned.match(/^([^\/\s]+)\/([^\/\s]+)$/);
+  const simpleMatch = cleaned.match(/^([^/\s]+)\/([^/\s]+)$/);
   if (simpleMatch) {
     return { owner: simpleMatch[1], repo: simpleMatch[2] };
   }
@@ -367,7 +371,7 @@ function RepositoryPickerDialog({
 
   return (
     <ResponsiveDialog open={open} onOpenChange={onOpenChange} onlyDialog>
-      <ResponsiveDialogContent className="max-w-4xl h-[50vh] flex flex-col">
+      <ResponsiveDialogContent className="flex h-[50vh] max-w-4xl flex-col">
         <ResponsiveDialogHeader>
           <ResponsiveDialogTitle>Add Repositories</ResponsiveDialogTitle>
           <ResponsiveDialogDescription>
@@ -375,9 +379,9 @@ function RepositoryPickerDialog({
           </ResponsiveDialogDescription>
         </ResponsiveDialogHeader>
 
-        <div className="space-y-4 w-full flex-1 flex flex-col min-h-0">
+        <div className="flex min-h-0 w-full flex-1 flex-col space-y-4">
           <div className="relative shrink-0">
-            <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+            <Search className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               placeholder="Search repos or paste GitHub link..."
               value={searchQuery}
@@ -388,7 +392,7 @@ function RepositoryPickerDialog({
 
           {/* Custom repo result */}
           {customRepo && (
-            <div className="rounded-lg border p-3 shrink-0">
+            <div className="shrink-0 rounded-lg border p-3">
               {customRepo.loading && (
                 <div className="flex items-center gap-2 text-muted-foreground text-sm">
                   <Loader2 className="size-4 animate-spin" />
@@ -405,7 +409,7 @@ function RepositoryPickerDialog({
                   onClick={() => {
                     if (customRepo.data) handleTogglePin(customRepo.data);
                   }}
-                  className="flex cursor-pointer items-center bg-muted/70 rounded-md justify-between gap-2 pr-2"
+                  className="flex cursor-pointer items-center justify-between gap-2 rounded-md bg-muted/70 pr-2"
                 >
                   <div className="flex-1">
                     <div className="font-medium text-sm">
@@ -429,7 +433,7 @@ function RepositoryPickerDialog({
           )}
 
           {/* Repository list */}
-          <div className="flex-1 space-y-1 overflow-y-auto min-h-0">
+          <div className="min-h-0 flex-1 space-y-1 overflow-y-auto">
             {filteredRepos.length === 0 ? (
               <div className="py-8 text-center text-muted-foreground text-sm">
                 {searchQuery
@@ -454,7 +458,7 @@ function RepositoryPickerDialog({
                   <div
                     key={repo.id}
                     onClick={() => handleTogglePin(repoData)}
-                    className="flex cursor-pointer items-center bg-muted/40 rounded-md justify-between gap-2 pl-2 pr-4 py-2 hover:bg-muted"
+                    className="flex cursor-pointer items-center justify-between gap-2 rounded-md bg-muted/40 py-2 pr-4 pl-2 hover:bg-muted"
                   >
                     <div className="flex min-w-0 flex-1 flex-col gap-0.5">
                       <div className="flex items-center gap-2">
@@ -501,6 +505,7 @@ function RepositoryPickerDialog({
  */
 export function PinnedRepositories({
   pinnedReposEnriched,
+  showTitle = true,
 }: {
   pinnedReposEnriched: Array<{
     id: string;
@@ -511,6 +516,7 @@ export function PinnedRepositories({
     openIssueCount?: number;
     lastActivity?: string;
   }>;
+  showTitle?: boolean;
 }) {
   const { pinnedRepos } = usePinnedRepos();
   const recentRepos = useRecentRepos(5);
@@ -524,20 +530,22 @@ export function PinnedRepositories({
 
   return (
     <div className="flex flex-col gap-2">
-      <div className="flex items-center justify-between gap-2">
-        <h2 className="text-muted-foreground text-xs font-medium uppercase tracking-wide">
-          Pinned Repositories
-        </h2>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => setPickerOpen(true)}
-          className="size-8 shrink-0 p-0"
-          title="Add repositories"
-        >
-          <Search className="size-4" />
-        </Button>
-      </div>
+      {showTitle && (
+        <div className="flex items-center justify-between gap-2">
+          <h2 className="font-medium text-muted-foreground text-xs uppercase tracking-wide">
+            Pinned Repositories
+          </h2>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setPickerOpen(true)}
+            className="size-8 shrink-0 p-0"
+            title="Add repositories"
+          >
+            <Search className="size-4" />
+          </Button>
+        </div>
+      )}
 
       {pinnedReposEnriched.length > 0 ? (
         <div className="flex flex-col gap-1">
@@ -564,11 +572,7 @@ export function PinnedRepositories({
         </div>
       )}
 
-      <RepositoryPickerDialog
-        open={pickerOpen}
-        onOpenChange={setPickerOpen}
-      />
+      <RepositoryPickerDialog open={pickerOpen} onOpenChange={setPickerOpen} />
     </div>
   );
 }
-

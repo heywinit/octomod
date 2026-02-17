@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertCircle } from "lucide-react";
+import { CircleDot } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface IssueCardProps {
@@ -19,43 +19,63 @@ interface IssueCardProps {
 
 /**
  * Compact Issue Card Component
- * Actionable, 1-line title, repo name + status pills
+ * Natural language, contextual
  */
 export function IssueCard({ issue }: IssueCardProps) {
+  const primaryLabel = issue.labels?.[0];
+
   return (
     <a
       href={issue.url}
       target="_blank"
       rel="noopener noreferrer"
       className={cn(
-        "flex items-center justify-between gap-3 rounded-lg bg-muted/40 px-3 py-2 transition-colors hover:bg-muted",
-        issue.waitingOnYou && "bg-yellow-500/5",
+        "group flex items-start gap-3 rounded-lg border border-border/50 bg-card px-3 py-2.5 transition-colors hover:bg-accent",
+        issue.waitingOnYou && "border-yellow-500/30 bg-yellow-500/5",
       )}
     >
-      <div className="flex min-w-0 flex-1 items-center gap-2">
-        <div
-          className={cn(
-            "size-1.5 shrink-0 rounded-full",
-            issue.state === "open" ? "bg-green-500" : "bg-muted-foreground",
-          )}
-        />
-        <span className="truncate text-sm font-medium">{issue.title}</span>
+      {/* Icon */}
+      <div className="mt-0.5 shrink-0 text-green-500">
+        <CircleDot className="size-4" />
       </div>
-      <div className="flex shrink-0 items-center gap-2">
-        <span className="text-muted-foreground text-xs">{issue.repository}</span>
-        {issue.waitingOnYou && (
-          <span className="rounded bg-yellow-500/20 px-1.5 py-0.5 text-yellow-600 text-xs dark:text-yellow-500">
-            Waiting on you
+
+      {/* Content */}
+      <div className="flex min-w-0 flex-1 flex-col gap-1">
+        <div className="flex items-center gap-2">
+          <span className="truncate font-medium text-foreground text-sm">
+            {issue.title}
           </span>
-        )}
-        {issue.labels && issue.labels.length > 0 && (
-          <span className="rounded bg-muted px-1.5 py-0.5 text-muted-foreground text-xs">
-            {issue.labels[0]}
-          </span>
-        )}
-        <span className="text-muted-foreground text-xs">{issue.timeAgo}</span>
+          {issue.state === "closed" && (
+            <span className="shrink-0 rounded bg-muted/50 px-1.5 py-0.5 text-muted-foreground text-xs">
+              closed
+            </span>
+          )}
+        </div>
+
+        <div className="flex flex-wrap items-center gap-y-1 text-muted-foreground text-xs">
+          <span>{issue.repository}</span>
+          <span className="text-border">·</span>
+          {issue.waitingOnYou ? (
+            <span className="text-yellow-600 dark:text-yellow-500">
+              assigned to you
+            </span>
+          ) : primaryLabel ? (
+            <span>{primaryLabel}</span>
+          ) : null}
+          {issue.waitingOnYou && (
+            <>
+              <span className="text-border">·</span>
+              <span>{issue.timeAgo}</span>
+            </>
+          )}
+          {!issue.waitingOnYou && (
+            <>
+              <span className="text-border">·</span>
+              <span>{issue.timeAgo}</span>
+            </>
+          )}
+        </div>
       </div>
     </a>
   );
 }
-

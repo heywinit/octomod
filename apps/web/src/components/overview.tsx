@@ -1,25 +1,26 @@
 "use client";
 
-import { GitPullRequest, AlertCircle } from "lucide-react";
-import { Card, CardContent } from "@/components/ui/card";
-import { useEffect, useState } from "react";
-import { usePinnedRepos } from "@/stores/pinned-repos";
-import { useAuthStore } from "@/stores/auth";
+import { AlertCircle, GitPullRequest } from "lucide-react";
 import { getContextualGreeting } from "luh-calm-greet";
-import {
-  useSyncEngine,
-  useDashboardMetrics,
-  useCIAlerts,
-  useActivityFeed,
-  usePinnedReposEnriched,
-} from "@/lib/sync";
-import { formatTimeAgo } from "@/lib/dashboard.service";
-import { CIAlertsBanner } from "@/components/ci-alerts-banner";
-import { IssueCard } from "@/components/issue-card";
+import { useEffect, useState } from "react";
 import { ActivityItem } from "@/components/activity-item";
+import { CIAlertsBanner } from "@/components/ci-alerts-banner";
+import { NotificationItem } from "@/components/notification-item";
 import { PinnedRepositories } from "@/components/pinned-repositories";
 import { SyncStatusIndicator } from "@/components/sync-status-indicator";
-
+import { Card, CardContent } from "@/components/ui/card";
+import {
+  useActivityFeed,
+  useCIAlerts,
+  useDashboardMetrics,
+  useIssuesNeedingAttention,
+  useNotifications,
+  usePinnedReposEnriched,
+  usePRsNeedingReview,
+  useSyncEngine,
+} from "@/lib/sync";
+import { useAuthStore } from "@/stores/auth";
+import { usePinnedRepos } from "@/stores/pinned-repos";
 
 /**
  * Overview Component
@@ -31,20 +32,18 @@ export function Overview() {
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   // Sync engine
-  const {
-    syncStatus,
-    lastSyncAt,
-    refresh,
-    issues,
-    fetchWorkflowsForPinned,
-  } = useSyncEngine();
+  const { syncStatus, lastSyncAt, refresh, issues, fetchWorkflowsForPinned } =
+    useSyncEngine();
 
   // Derived data from cache
   const metrics = useDashboardMetrics();
-  const ciAlerts = useCIAlerts();
   const activityFeed = useActivityFeed(10);
   const pinnedReposEnriched = usePinnedReposEnriched();
   const { pinnedRepos } = usePinnedRepos();
+  const notifications = useNotifications(8);
+  const issuesNeedingAttention = useIssuesNeedingAttention(user?.login || "");
+  const prsNeedingReview = usePRsNeedingReview(user?.login || "");
+  const ciAlerts = useCIAlerts();
 
   // Fetch workflows for pinned repos on mount
   useEffect(() => {
@@ -54,7 +53,7 @@ export function Overview() {
           owner: r.owner,
           name: r.name,
           fullName: r.fullName,
-        }))
+        })),
       );
     }
   }, [pinnedRepos, fetchWorkflowsForPinned]);
@@ -78,27 +77,8 @@ export function Overview() {
     }
   };
 
-  // Transform cached issues to display format
-  const recentIssues = Object.values(issues.byId)
-    .filter((issue) => issue.state === "open" && !issue.isPullRequest)
-    .sort(
-      (a, b) =>
-        new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
-    )
-    .slice(0, 7)
-    .map((issue) => ({
-      id: String(issue.id),
-      number: issue.number,
-      title: issue.title,
-      repository: issue.repositoryFullName,
-      state: issue.state,
-      url: issue.htmlUrl,
-      timeAgo: formatTimeAgo(new Date(issue.updatedAt)),
-      labels: issue.labels.map((l) => l.name),
-      waitingOnYou: issue.assignees.some((a) => a.login === user?.login),
-    }));
-
-  const isLoading = syncStatus === "syncing" && Object.keys(issues.byId).length === 0;
+  const isLoading =
+    syncStatus === "syncing" && Object.keys(issues.byId).length === 0;
 
   if (isLoading) {
     return (
@@ -110,7 +90,7 @@ export function Overview() {
 
   return (
     <div className="flex flex-1 flex-col p-4 md:p-6">
-      <div className="mx-auto w-full max-w-7xl mt-16">
+      <div className="mx-auto mt-16 w-full max-w-7xl">
         {/* Header */}
         <div className="mb-4 flex items-center justify-between">
           <h1 className="font-semibold text-4xl tracking-tight">
@@ -124,78 +104,130 @@ export function Overview() {
           />
         </div>
 
-        {/* CI/CD Alerts - Full Width, Sticky */}
+        {/* CI Alerts Banner */}
         <CIAlertsBanner alerts={ciAlerts} />
 
         {/* 3:1 Two Column Layout */}
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-[3fr_1.5fr]">
+        <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-[3fr_1.5fr]">
           {/* Main Column (Left) */}
-          <div className="flex flex-col gap-4">
-            {/* Recent Issues Section */}
-            <div className="flex flex-col gap-2">
-              <h2 className="text-muted-foreground text-xs font-medium uppercase tracking-wide">
-                Recent Issues
-              </h2>
-              {recentIssues.length > 0 ? (
-                <div className="flex flex-col gap-1.5">
-                  {recentIssues.map((issue) => (
-                    <IssueCard key={issue.id} issue={issue} />
-                  ))}
-                </div>
-              ) : (
-                <div className="rounded-lg bg-muted/30 px-3 py-8 text-center">
-                  <p className="text-muted-foreground text-sm">
-                    Nothing needs your attention
-                  </p>
-                </div>
-              )}
-            </div>
-
+          <div className="flex flex-col gap-6">
             {/* Activity Feed Section */}
-            <div className="flex flex-col gap-2">
-              <h2 className="text-muted-foreground text-xs font-medium uppercase tracking-wide">
-                Activity Feed
+            <div className="flex flex-col gap-3">
+              <h2 className="font-medium text-foreground/80 text-sm uppercase tracking-wide">
+                Activity
               </h2>
               {activityFeed.length > 0 ? (
-                <div className="flex flex-col gap-1.5">
+                <div className="flex flex-col gap-2">
                   {activityFeed.map((activity) => (
                     <ActivityItem key={activity.id} activity={activity} />
                   ))}
                 </div>
               ) : (
-                <div className="rounded-lg bg-muted/20 px-3 py-6 text-center">
-                  <p className="text-muted-foreground text-sm">No recent activity</p>
+                <div className="rounded-lg border border-border/50 bg-card px-3 py-6 text-center">
+                  <p className="text-muted-foreground text-sm">
+                    No recent activity
+                  </p>
                 </div>
               )}
             </div>
+
+            {/* Issues Needing Attention Section */}
+            {issuesNeedingAttention.length > 0 && (
+              <div className="flex flex-col gap-3">
+                <h2 className="font-medium text-foreground/80 text-sm uppercase tracking-wide">
+                  Needs Attention
+                </h2>
+                <div className="flex flex-col gap-2">
+                  {issuesNeedingAttention.slice(0, 5).map((issue) => (
+                    <a
+                      key={issue.id}
+                      href={issue.htmlUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-3 rounded-lg border border-border/50 bg-card p-3 transition-colors hover:bg-accent"
+                    >
+                      <AlertCircle className="size-4 shrink-0 text-orange-500" />
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate font-medium text-sm">
+                          {issue.title}
+                        </p>
+                        <p className="text-muted-foreground text-xs">
+                          {issue.repositoryFullName} #{issue.number}
+                        </p>
+                      </div>
+                      {issue.labels[0] && (
+                        <span className="shrink-0 rounded-full bg-primary/10 px-2 py-0.5 text-xs">
+                          {issue.labels[0].name}
+                        </span>
+                      )}
+                    </a>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* PRs Needing Review Section */}
+            {prsNeedingReview.length > 0 && (
+              <div className="flex flex-col gap-3">
+                <h2 className="font-medium text-foreground/80 text-sm uppercase tracking-wide">
+                  Review Requested
+                </h2>
+                <div className="flex flex-col gap-2">
+                  {prsNeedingReview.slice(0, 5).map((pr) => (
+                    <a
+                      key={pr.id}
+                      href={pr.htmlUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-3 rounded-lg border border-border/50 bg-card p-3 transition-colors hover:bg-accent"
+                    >
+                      <GitPullRequest className="size-4 shrink-0 text-blue-500" />
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate font-medium text-sm">
+                          {pr.title}
+                        </p>
+                        <p className="text-muted-foreground text-xs">
+                          {pr.repositoryFullName} #{pr.number}
+                        </p>
+                      </div>
+                      {pr.draft && (
+                        <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-xs">
+                          Draft
+                        </span>
+                      )}
+                    </a>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Context Column (Right) */}
           <div className="flex flex-col gap-4">
             {/* Open Issues and PRs Cards */}
-            <div className="grid grid-cols-2 gap-2">
-              <Card>
-                <CardContent className="flex flex-col gap-1.5">
+            <div className="grid grid-cols-2 gap-3">
+              <Card className="border-border/50">
+                <CardContent className="flex flex-col gap-1">
                   <div className="flex items-center gap-2">
-                    <AlertCircle className="size-4 text-muted-foreground" />
-                    <span className="text-muted-foreground text-xs font-medium uppercase tracking-wide">
+                    <AlertCircle className="size-4 text-green-500" />
+                    <span className="font-medium text-foreground/70 text-xs uppercase tracking-wide">
                       Open Issues
                     </span>
                   </div>
-                  <span className="font-semibold text-2xl text-foreground">
+                  <span className="font-semibold text-3xl text-foreground">
                     {metrics.openIssues}
                   </span>
                 </CardContent>
               </Card>
-              <Card>
-                <CardContent className="flex flex-col gap-1.5">
+              <Card className="border-border/50">
+                <CardContent className="flex flex-col gap-1">
                   <div className="flex items-center gap-2">
-                    <GitPullRequest className="size-4 text-muted-foreground" />
-                    <span className="text-muted-foreground text-xs font-medium uppercase tracking-wide">
+                    <GitPullRequest className="size-4 text-blue-500" />
+                    <span className="font-medium text-foreground/70 text-xs uppercase tracking-wide">
                       Open PRs
                     </span>
                   </div>
-                  <span className="font-semibold text-2xl text-foreground">
+                  <span className="font-semibold text-3xl text-foreground">
                     {metrics.openPRs}
                   </span>
                 </CardContent>
@@ -205,13 +237,20 @@ export function Overview() {
             {/* Pinned Repositories */}
             <PinnedRepositories pinnedReposEnriched={pinnedReposEnriched} />
 
-            {/* Health Snapshot */}
-            {metrics.reposNeedingAttention > 0 && (
-              <div className="rounded-lg bg-yellow-500/10 px-3 py-2">
-                <span className="text-yellow-600 text-sm dark:text-yellow-500">
-                  {metrics.reposNeedingAttention} repo
-                  {metrics.reposNeedingAttention !== 1 ? "s" : ""} need attention
-                </span>
+            {/* Notifications */}
+            {notifications.length > 0 && (
+              <div className="flex flex-col gap-2">
+                <h3 className="font-medium text-foreground/80 text-xs uppercase tracking-wide">
+                  Notifications
+                </h3>
+                <div className="flex flex-col gap-1.5">
+                  {notifications.map((notification) => (
+                    <NotificationItem
+                      key={notification.id}
+                      notification={notification}
+                    />
+                  ))}
+                </div>
               </div>
             )}
           </div>
